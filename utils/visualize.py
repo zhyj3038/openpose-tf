@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 
 
 def draw_mask(image, mask):
-    _mask = scipy.misc.imresize(np.squeeze(mask), image.shape[:-1])
+    _mask = scipy.misc.imresize(np.squeeze(mask), image.shape[:2])
     for y, row in enumerate(_mask):
         for x, v in enumerate(row):
             if v < 128:
