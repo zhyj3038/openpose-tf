@@ -27,10 +27,10 @@ import utils.visualize
 
 
 def main():
-    limbs = utils.get_limbs(config)
     cachedir = utils.get_cachedir(config)
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
+    limbs = utils.get_limbs(config)
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     size_label = (size_image[0] // 8, size_image[1] // 8)
     tf.logging.info('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
@@ -54,7 +54,7 @@ def main():
                 assert image.shape[:2] == size_image
                 assert label.shape[:2] == size_label
                 image = image.astype(np.uint8)
-                utils.visualize.draw_mask(image, mask)
+                utils.visualize.draw_mask(image, mask.astype(np.uint8) * 255)
                 ax.imshow(image)
                 ax.set_xticks([])
                 ax.set_yticks([])

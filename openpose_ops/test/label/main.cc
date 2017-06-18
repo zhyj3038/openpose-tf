@@ -80,9 +80,10 @@ int main(void)
 	typedef float _TReal;
 	const _TReal sigma_parts = 7;
 	const _TReal sigma_limbs = 7;
+	const std::pair<size_t, size_t> downsample = std::make_pair(8, 8);
 	{
 		const std::string prefix = std::string(DUMP_DIR) + "/COCO_train2014_000000000077";
-		test<_TPixel, _TInteger>(prefix + IMAGE_EXT, prefix + ".npy", DUMP_DIR ".tsv", std::make_pair(8, 8), sigma_parts, sigma_limbs);
+		test<_TPixel, _TInteger>(prefix + IMAGE_EXT, prefix + ".npy", DUMP_DIR ".tsv", downsample, sigma_parts, sigma_limbs);
 	}
 	return 0;
 }

@@ -34,15 +34,15 @@ public:
 	typedef _TInteger TInteger;
 	typedef std::mt19937 TRandom;
 
-	explicit AugmentationOp(tensorflow::OpKernelConstruction* context);
-	void Compute(tensorflow::OpKernelContext* context) override;
+	explicit AugmentationOp(tensorflow::OpKernelConstruction *context);
+	void Compute(tensorflow::OpKernelContext *context) override;
 
 private:
 	TRandom random_;
 };
 
 template <typename _TPixel, typename _TReal, typename _TInteger>
-AugmentationOp<_TPixel, _TReal, _TInteger>::AugmentationOp(tensorflow::OpKernelConstruction* context)
+AugmentationOp<_TPixel, _TReal, _TInteger>::AugmentationOp(tensorflow::OpKernelConstruction *context)
 	: tensorflow::OpKernel(context)
 #ifdef NDEBUG
 	, random_(std::time(0))
@@ -51,20 +51,22 @@ AugmentationOp<_TPixel, _TReal, _TInteger>::AugmentationOp(tensorflow::OpKernelC
 }
 
 template <typename _TPixel, typename _TReal, typename _TInteger>
-void AugmentationOp<_TPixel, _TReal, _TInteger>::Compute(tensorflow::OpKernelContext* context)
+void AugmentationOp<_TPixel, _TReal, _TInteger>::Compute(tensorflow::OpKernelContext *context)
 {
-	const tensorflow::Tensor& image = context->input(0);
-	const tensorflow::Tensor& mask = context->input(1);
-	const tensorflow::Tensor& keypoints = context->input(2);
-	const auto size = context->input(3).vec<TInteger>();
-	const auto scale = context->input(4).vec<TReal>();
-	const TReal rotate = context->input(5).scalar<TReal>()(0);
+	const tensorflow::Tensor &image = context->input(0);
+	const tensorflow::Tensor &mask = context->input(1);
+	const tensorflow::Tensor &keypoints = context->input(2);
+	const auto size_image = context->input(3).vec<TInteger>();
+	const auto size_label = context->input(4).vec<TInteger>();
+	const auto scale = context->input(5).vec<TReal>();
+	const TReal rotate = context->input(6).scalar<TReal>()(0);
+	const TPixel fill = context->input(7).scalar<TPixel>()(0);
 
-	tensorflow::Tensor* image_result = NULL;
-	OP_REQUIRES_OK(context, context->allocate_output(0, tensorflow::TensorShape({size(0), size(1), image.shape().dim_size(2)}), &image_result));
-	tensorflow::Tensor* mask_result = NULL;
-	OP_REQUIRES_OK(context, context->allocate_output(1, tensorflow::TensorShape({size(0), size(1), mask.shape().dim_size(2)}), &mask_result));
-	tensorflow::Tensor* keypoints_result = NULL;
+	tensorflow::Tensor *image_result = NULL;
+	OP_REQUIRES_OK(context, context->allocate_output(0, tensorflow::TensorShape({size_image(0), size_image(1), image.shape().dim_size(2)}), &image_result));
+	tensorflow::Tensor *mask_result = NULL;
+	OP_REQUIRES_OK(context, context->allocate_output(1, tensorflow::TensorShape({size_label(0), size_label(1), mask.shape().dim_size(2)}), &mask_result));
+	tensorflow::Tensor *keypoints_result = NULL;
 	OP_REQUIRES_OK(context, context->allocate_output(2, keypoints.shape(), &keypoints_result));
 
 	const TReal _scale = std::uniform_real_distribution<TReal>(scale(0), scale(1))(random_);
@@ -74,7 +76,8 @@ void AugmentationOp<_TPixel, _TReal, _TInteger>::Compute(tensorflow::OpKernelCon
 		openpose::augmentation(random_,
 			image.tensor<TPixel, 3>(), mask.tensor<TPixel, 3>(), keypoints.tensor<TReal, 3>(),
 			_scale, _rotate,
-			image_result->tensor<TPixel, 3>(), mask_result->tensor<TPixel, 3>(), keypoints_result->tensor<TReal, 3>()
+			image_result->tensor<TPixel, 3>(), mask_result->tensor<TPixel, 3>(), keypoints_result->tensor<TReal, 3>(),
+			fill
 		);
 	}
 	catch (...)

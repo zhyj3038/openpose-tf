@@ -61,9 +61,36 @@ def get_cachedir(config):
     return os.path.join(basedir, 'cache', name)
 
 
+def get_logdir(config):
+    basedir = os.path.expanduser(os.path.expandvars(config.get('cache', 'basedir')))
+    backbone = os.path.splitext(config.get('config', 'backbone'))[-1][1:]
+    stages = os.path.splitext(config.get('config', 'stages'))[-1][1:]
+    return os.path.join(basedir, backbone, stages)
+
+
 def get_limbs(config):
     dataset = os.path.expanduser(os.path.expandvars(config.get('cache', 'dataset')))
     return np.loadtxt(dataset + '.tsv', dtype=np.int, delimiter='\t')
+
+
+def parse_attr(s):
+    module, name = s.rsplit('.', 1)
+    module = importlib.import_module(module)
+    return getattr(module, name)
+
+
+def get_backbone_downsampling(config):
+    module, name = config.get('config', 'backbone').rsplit('.', 1)
+    module = importlib.import_module(module)
+    return getattr(module, name.upper() + '_DOWNSAMPLING')
+
+
+def calc_backbone_size(config, size):
+    height, width = size
+    downsampling_width, downsampling_height = get_backbone_downsampling(config)
+    assert width % downsampling_width == 0
+    assert height % downsampling_height == 0
+    return width // downsampling_width, height // downsampling_height
 
 
 def match_trainable_variables(pattern):

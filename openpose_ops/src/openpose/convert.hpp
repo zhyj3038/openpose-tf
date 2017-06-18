@@ -66,6 +66,8 @@ template <typename _T, typename _TTensor, int Options>
 void copy_mat_tensor(const cv::Mat_<_T> &mat, Eigen::TensorMap<_TTensor, Options> tensor)
 {
 	typedef Eigen::DenseIndex _TIndex;
+	assert(mat.rows == tensor.dimension(0));
+	assert(mat.cols == tensor.dimension(1));
 	assert(tensor.dimension(2) <= 1);
 	for (size_t i = 0; i < tensor.size(); ++i)
 		tensor(i) = mat.data[i];

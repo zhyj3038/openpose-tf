@@ -16,13 +16,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import itertools
+import numpy as np
+import scipy.misc
 import matplotlib.pyplot as plt
 
 
 def draw_mask(image, mask):
-    for y, row in enumerate(mask):
+    _mask = scipy.misc.imresize(np.squeeze(mask), image.shape[:-1])
+    for y, row in enumerate(_mask):
         for x, v in enumerate(row):
-            if not v:
+            if v < 128:
                 image[y, x] = 0
 
 

@@ -31,27 +31,27 @@ public:
 	typedef _TReal TReal;
 	typedef _TInteger TInteger;
 
-	explicit LabelOp(tensorflow::OpKernelConstruction* context);
-	void Compute(tensorflow::OpKernelContext* context) override;
+	explicit LabelOp(tensorflow::OpKernelConstruction *context);
+	void Compute(tensorflow::OpKernelContext *context) override;
 };
 
 template <typename _TReal, typename _TInteger>
-LabelOp<_TReal, _TInteger>::LabelOp(tensorflow::OpKernelConstruction* context)
+LabelOp<_TReal, _TInteger>::LabelOp(tensorflow::OpKernelConstruction *context)
 	: tensorflow::OpKernel(context)
 {
 }
 
 template <typename _TReal, typename _TInteger>
-void LabelOp<_TReal, _TInteger>::Compute(tensorflow::OpKernelContext* context)
+void LabelOp<_TReal, _TInteger>::Compute(tensorflow::OpKernelContext *context)
 {
 	const auto size_image = context->input(0).vec<TInteger>();
 	const auto size_label = context->input(1).vec<TInteger>();
-	const tensorflow::Tensor& keypoints = context->input(2);
-	const tensorflow::Tensor& limbs = context->input(3);
+	const tensorflow::Tensor &keypoints = context->input(2);
+	const tensorflow::Tensor &limbs = context->input(3);
 	const TReal sigma_parts = context->input(4).scalar<TReal>()(0);
 	const TReal sigma_limbs = context->input(5).scalar<TReal>()(0);
 
-	tensorflow::Tensor* label = NULL;
+	tensorflow::Tensor *label = NULL;
 	OP_REQUIRES_OK(context, context->allocate_output(0, tensorflow::TensorShape({size_label(0), size_label(1), limbs.shape().dim_size(0) * 2 + keypoints.shape().dim_size(1) + 1}), &label));
 
 	try

@@ -26,8 +26,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace openpose
 {
-template <typename _TTensor, int Options>
-void draw_keypoints(cv::Mat &mat, Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index)
+template <typename _TPixel, int cn, typename _TTensor, int Options>
+void draw_keypoints(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	assert(keypoints.rank() == 3);
@@ -45,41 +45,48 @@ void draw_keypoints(cv::Mat &mat, Eigen::TensorMap<_TTensor, Options> keypoints,
 	}
 }
 
-template <typename _TPixel>
-cv::Mat render(const cv::Mat_<cv::Vec<_TPixel, 3> > &image, const cv::Mat_<_TPixel> &mask)
+template <typename _TPixel, int cn>
+cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &image, const cv::Mat_<_TPixel> &mask)
 {
-	typedef cv::Vec<_TPixel, 3> _TVec3;
-	typedef cv::Mat_<_TVec3> _TMat3;
-	_TMat3 _mask;
-	cv::cvtColor(mask, _mask, CV_GRAY2BGR);
-	cv::Mat canvas;
-	cv::addWeighted(image, 0.5, _mask, 0.5, 0.0, canvas);
+	typedef cv::Vec<_TPixel, cn> _TVec;
+	typedef cv::Mat_<_TVec> _TMat;
+	_TMat canvas = image.clone();
+	cv::Mat_<_TPixel> _mask;
+	cv::resize(mask, _mask, cv::Size(image.cols, image.rows));
+	for (int i = 0; i < canvas.rows; ++i)
+		for (int j = 0; j < canvas.cols; ++j)
+			if (_mask(i, j) < 128)
+			{
+				_TVec &pixel = canvas(i, j);
+				for (int k = 0; k < pixel.channels; ++k)
+					pixel[k] = 0;
+			}
 	return canvas;
 }
 
-template <typename _TPixel, typename _TTensor, int Options>
-cv::Mat render(const cv::Mat_<cv::Vec<_TPixel, 3> > &image, const cv::Mat_<_TPixel> &mask, Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index = -1)
+template <typename _TPixel, int cn, typename _TTensor, int Options>
+cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &image, const cv::Mat_<_TPixel> &mask, Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index = -1)
 {
-	cv::Mat canvas = render(image, mask);
+	auto canvas = render(image, mask);
 	draw_keypoints(canvas, keypoints, index);
 	return canvas;
 }
 
-template <typename _TPixel, typename _TTensor, int Options>
-cv::Mat render(const cv::Mat_<cv::Vec<_TPixel, 3> > &image, Eigen::TensorMap<_TTensor, Options> label, const Eigen::DenseIndex index)
+template <typename _TPixel, int cn, typename _TTensor, int Options>
+cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &image, Eigen::TensorMap<_TTensor, Options> label, const Eigen::DenseIndex index)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef typename std::remove_const<typename _TTensor::Scalar>::type _T;
-	typedef cv::Vec<_T, 3> _TVec3;
-	typedef cv::Mat_<_TVec3> _TMat3;
+	typedef cv::Vec<_TPixel, cn> _TVec;
+	typedef cv::Mat_<_TVec> _TMat;
 
-	cv::Mat mat(label.dimension(0), label.dimension(1), CV_8UC1);
+	_TMat mat(label.dimension(0), label.dimension(1), CV_8UC1);
 	for (_TIndex i = 0; i < mat.rows; ++i)
 		for (_TIndex j = 0; j < mat.cols; ++j)
-			mat.at<uchar>(i, j) = label(i, j, index) * 255;
+			mat(i, j) = label(i, j, index) * 255;
 	cv::resize(mat, mat, cv::Size(image.cols, image.rows));
 	applyColorMap(mat, mat, cv::COLORMAP_JET);
-	cv::Mat canvas;
+	_TMat canvas;
 	cv::addWeighted(image, 0.5, mat, 0.5, 0.0, canvas);
 	return canvas;
 }

@@ -23,7 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <limits>
 #include <algorithm>
 #include <exception>
-#include <gtest/gtest.h>
 #include <boost/format.hpp>
 #include <tensorflow/core/framework/tensor_types.h>
 #include <opencv2/opencv.hpp>
@@ -84,7 +83,7 @@ void rotate_points(const cv::Mat &rotate_mat, Eigen::TensorMap<_TTensor, Options
 }
 
 template <typename _TPixel, typename _TTensor, int Options>
-void center_rotate(const typename _TTensor::Scalar rotate, const cv::Mat_<cv::Vec<_TPixel, 3> > &image, const cv::Mat_<_TPixel> &mask, cv::Mat_<cv::Vec<_TPixel, 3> > &image_result, cv::Mat_<_TPixel> &mask_result, Eigen::TensorMap<_TTensor, Options> keypoints_result)
+void center_rotate(const typename _TTensor::Scalar rotate, const cv::Mat_<cv::Vec<_TPixel, 3> > &image, const cv::Mat_<_TPixel> &mask, cv::Mat_<cv::Vec<_TPixel, 3> > &image_result, cv::Mat_<_TPixel> &mask_result, Eigen::TensorMap<_TTensor, Options> keypoints_result, const _TPixel fill)
 {
 	typedef typename _TTensor::Scalar _TReal;
 	typedef double _TRotate;
@@ -95,7 +94,7 @@ void center_rotate(const typename _TTensor::Scalar rotate, const cv::Mat_<cv::Ve
 	rotate_mat.at<_TRotate>(0, 2) += rect.width / 2.0 - center.x;
 	rotate_mat.at<_TRotate>(1, 2) += rect.height / 2.0 - center.y;
 	cv::warpAffine(image, image_result, rotate_mat, rect.size(), cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar_<_TPixel>(128, 128, 128));
-	cv::warpAffine(mask, mask_result, rotate_mat, rect.size(), cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar_<_TPixel>(255));
+	cv::warpAffine(mask, mask_result, rotate_mat, rect.size(), cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar_<_TPixel>(fill));
 	rotate_points(rotate_mat, keypoints_result);
 }
 
@@ -158,11 +157,11 @@ void move_scale_keypoints(const cv::Rect_<typename _TTensor::Scalar> &bound, con
 }
 
 template <typename _TRandom, typename _TConstTensorPixel, typename _TConstTensorReal, typename _TTensorPixel, typename _TTensorReal, int Options>
-void _augmentation(_TRandom &random,
+void augmentation(_TRandom &random,
 	Eigen::TensorMap<_TConstTensorPixel, Options> image, Eigen::TensorMap<_TConstTensorPixel, Options> mask, Eigen::TensorMap<_TConstTensorReal, Options> keypoints,
 	const typename _TTensorReal::Scalar scale, const typename _TTensorReal::Scalar rotate,
 	Eigen::TensorMap<_TTensorPixel, Options> image_result, Eigen::TensorMap<_TTensorPixel, Options> mask_result, Eigen::TensorMap<_TTensorReal, Options> keypoints_result,
-	const Eigen::DenseIndex index)
+	const typename _TConstTensorPixel::Scalar fill, const Eigen::DenseIndex index)
 {
 	typedef typename _TTensorPixel::Scalar _TPixel;
 	typedef typename _TTensorReal::Scalar _TReal;
@@ -174,7 +173,7 @@ void _augmentation(_TRandom &random,
 	keypoints_result = keypoints;
 	_TMat3 _image_result;
 	_TMat1 _mask_result;
-	center_rotate(rotate, tensor_mat<_TPixel, 3>(image), tensor_mat<_TPixel>(mask), _image_result, _mask_result, keypoints_result);
+	center_rotate(rotate, tensor_mat<_TPixel, 3>(image), tensor_mat<_TPixel>(mask), _image_result, _mask_result, keypoints_result, fill);
 #if 1
 #ifdef DEBUG_SHOW
 	{
@@ -204,7 +203,7 @@ void _augmentation(_TRandom &random,
 #endif
 #endif
 	resize(_image_result, _image_result, dsize, 0, 0, cv::INTER_CUBIC);
-	resize(_mask_result, _mask_result, dsize, 0, 0, cv::INTER_CUBIC);
+	resize(_mask_result, _mask_result, cv::Size(mask_result.dimension(1), mask_result.dimension(0)), 0, 0, cv::INTER_CUBIC);
 	move_scale_keypoints(bound, dsize, keypoints_result);
 #if 1
 #ifdef DEBUG_SHOW
@@ -224,11 +223,12 @@ template <typename _TRandom, typename _TConstTensorPixel, typename _TConstTensor
 Eigen::DenseIndex augmentation(_TRandom &random,
 	Eigen::TensorMap<_TConstTensorPixel, Options> image, Eigen::TensorMap<_TConstTensorPixel, Options> mask, Eigen::TensorMap<_TConstTensorReal, Options> keypoints,
 	const typename _TTensorReal::Scalar scale, const typename _TTensorReal::Scalar rotate,
-	Eigen::TensorMap<_TTensorPixel, Options> image_result, Eigen::TensorMap<_TTensorPixel, Options> mask_result, Eigen::TensorMap<_TTensorReal, Options> keypoints_result)
+	Eigen::TensorMap<_TTensorPixel, Options> image_result, Eigen::TensorMap<_TTensorPixel, Options> mask_result, Eigen::TensorMap<_TTensorReal, Options> keypoints_result,
+	const typename _TConstTensorPixel::Scalar fill)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	const _TIndex index = std::uniform_int_distribution<_TIndex>(0, keypoints_result.dimension(0) - 1)(random);
-	_augmentation(random, image, mask, keypoints, scale, rotate, image_result, mask_result, keypoints_result, index);
+	augmentation(random, image, mask, keypoints, scale, rotate, image_result, mask_result, keypoints_result, fill, index);
 	return index;
 }
 }
