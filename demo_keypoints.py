@@ -18,16 +18,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import argparse
 import configparser
-import shutil
 import numpy as np
 import scipy.misc
 import matplotlib.pyplot as plt
 import tensorflow as tf
-import utils
+import utils.visualize
 
 
 def main():
-    skeleton = utils.get_skeleton(config)
+    limbs = utils.get_limbs(config)
     cachedir = utils.get_cachedir(config)
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
@@ -41,21 +40,14 @@ def main():
             example.ParseFromString(serialized)
             imagepath = example.features.feature['imagepath'].bytes_list.value[0].decode()
             image = scipy.misc.imread(imagepath)
-            keypoints = np.fromstring(example.features.feature['keypoints'].bytes_list.value[0], dtype=np.int32).reshape([-1, num_parts, 3])
             maskpath = example.features.feature['maskpath'].bytes_list.value[0].decode()
             mask = scipy.misc.imread(maskpath)
-            plt.imshow(image)
-            plt.imshow(mask, alpha=args.alpha)
-            for _keypoints in keypoints:
-                for i, (x, y, v) in enumerate(_keypoints):
-                    assert v >= 0
-                    if v > 0:
-                        plt.text(x, y, str(i), bbox=dict(facecolor=args.colors[v - 1], alpha=args.alpha))
-                for i1, i2 in skeleton:
-                    x1, y1, v1 = _keypoints[i1].T
-                    x2, y2, v2 = _keypoints[i2].T
-                    if v1 > 0 and v2 > 0:
-                        plt.plot([x1, x2], [y1, y2])
+            keypoints = np.fromstring(example.features.feature['keypoints'].bytes_list.value[0], dtype=np.int32).reshape([-1, num_parts, 3])
+            fig = plt.figure()
+            ax = fig.gca()
+            utils.visualize.draw_mask(image, mask)
+            ax.imshow(image)
+            utils.visualize.draw_keypoints(ax, keypoints, limbs, args.colors, args.alpha)
             plt.show()
 
 

@@ -23,39 +23,39 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import utils.data
+import utils.visualize
 
 
 def main():
-    skeleton = utils.get_skeleton(config)
+    limbs = utils.get_limbs(config)
     cachedir = utils.get_cachedir(config)
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
-    width = config.getint('config', 'width')
-    height = config.getint('config', 'height')
-    tf.logging.info('(width, height)=(%d, %d)' % (width, height))
+    size_image = config.getint('config', 'height'), config.getint('config', 'width')
+    size_label = (size_image[0] // 8, size_image[1] // 8)
+    tf.logging.info('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
+    batch_size = args.rows * args.cols
     paths = [os.path.join(cachedir, profile + '.tfrecord') for profile in args.profile]
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
     with tf.Session() as sess:
         with tf.name_scope('batch'):
-            image_rgb, labels = utils.data.load_image_labels(config, paths, width, height, skeleton, num_parts)
-            batch = tf.train.shuffle_batch((image_rgb,) + labels, batch_size=args.batch_size,
+            image, mask, _, label = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs)
+            batch = tf.train.shuffle_batch([image, mask, label], batch_size=batch_size,
                 capacity=config.getint('queue', 'capacity'), min_after_dequeue=config.getint('queue', 'min_after_dequeue'), num_threads=multiprocessing.cpu_count()
             )
         tf.global_variables_initializer().run()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess, coord)
         while True:
-            cnt = 0
-            while True:
-                batch_image, batch_labels = sess.run([batch[0], batch[1:]])
-                print(cnt)
-                cnt += 1
-            batch_image = batch_image.astype(np.uint8)
-            fig, axes = plt.subplots(args.batch_size, 4)
-            for b, (_axes, image) in enumerate(zip(axes, batch_image)):
-                _axes[0].imshow(image)
-            for ax in axes.flat:
+            _batch = sess.run(batch)
+            fig, axes = plt.subplots(args.rows, args.cols)
+            for ax, image, mask, label in zip(*([axes.flat] + _batch)):
+                assert image.shape[:2] == size_image
+                assert label.shape[:2] == size_label
+                image = image.astype(np.uint8)
+                utils.visualize.draw_mask(image, mask)
+                ax.imshow(image)
                 ax.set_xticks([])
                 ax.set_yticks([])
             fig.tight_layout()
@@ -68,8 +68,8 @@ def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
     parser.add_argument('-p', '--profile', nargs='+', default=['train', 'val'])
-    parser.add_argument('-g', '--grid', action='store_true')
-    parser.add_argument('--batch_size', default=5, type=int)
+    parser.add_argument('--rows', default=5, type=int)
+    parser.add_argument('--cols', default=5, type=int)
     parser.add_argument('--level', default='info', help='logging level')
     return parser.parse_args()
 

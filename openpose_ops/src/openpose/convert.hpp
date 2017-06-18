@@ -23,30 +23,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace openpose
 {
-template <typename _T, int cn>
-cv::Mat_<cv::Vec<_T, cn> > tensor_mat(typename tensorflow::TTypes<_T, 3>::ConstTensor tensor)
+template <typename _T, int cn, typename _TTensor, int Options>
+cv::Mat_<cv::Vec<_T, cn> > tensor_mat(Eigen::TensorMap<_TTensor, Options> tensor)
 {
-	typedef typename tensorflow::TTypes<_T>::Tensor::Index _TIndex;
-	typedef cv::Vec<_T, cn> _TPixel;
-	typedef cv::Mat_<_TPixel> _TMat;
+	typedef Eigen::DenseIndex _TIndex;
+	typedef cv::Vec<_T, cn> _TVec;
+	typedef cv::Mat_<_TVec> _TMat;
 	assert(tensor.dimension(2) == cn);
-	cv::Mat_<cv::Vec<_T, cn> > mat(tensor.dimension(0), tensor.dimension(1));
+	_TMat mat(tensor.dimension(0), tensor.dimension(1));
 	for (_TIndex i = 0; i < tensor.dimension(0); ++i)
 		for (_TIndex j = 0; j < tensor.dimension(1); ++j)
 		{
-			_TPixel &pixel = mat(i, j);
+			_TVec &pixel = mat(i, j);
 			for (_TIndex k = 0; k < tensor.dimension(2); ++k)
 				pixel[k] = tensor(i, j, k);
 		}
 	return mat;
 }
 
-template <typename _T>
-cv::Mat_<_T> tensor_mat(typename tensorflow::TTypes<_T, 3>::ConstTensor tensor)
+template <typename _T, typename _TTensor, int Options>
+cv::Mat_<_T> tensor_mat(Eigen::TensorMap<_TTensor, Options> tensor)
 {
-	typedef typename tensorflow::TTypes<_T>::Tensor::Index _TIndex;
+	typedef Eigen::DenseIndex _TIndex;
 	typedef cv::Mat_<_T> _TMat;
-	assert(tensor.dimension(2) == 1);
+	assert(tensor.dimension(2) <= 1);
 	cv::Mat_<_T> mat(tensor.dimension(0), tensor.dimension(1));
 	for (_TIndex i = 0; i < tensor.dimension(0); ++i)
 		for (_TIndex j = 0; j < tensor.dimension(1); ++j)
@@ -54,36 +54,43 @@ cv::Mat_<_T> tensor_mat(typename tensorflow::TTypes<_T, 3>::ConstTensor tensor)
 	return mat;
 }
 
-template <typename _T, int cn>
-void copy_mat_tensor(const cv::Mat_<cv::Vec<_T, cn> > &mat, typename tensorflow::TTypes<_T, 3>::Tensor tensor)
+template <typename _T, int cn, typename _TTensor, int Options>
+void copy_mat_tensor(const cv::Mat_<cv::Vec<_T, cn> > &mat, Eigen::TensorMap<_TTensor, Options> tensor)
 {
-	typedef typename tensorflow::TTypes<_T>::Tensor::Index _TIndex;
-	typedef cv::Vec<_T, cn> _TPixel;
-	typedef cv::Mat_<_TPixel> _TMat;
-	for (_TIndex i = 0; i < tensor.dimension(0); ++i)
-		for (_TIndex j = 0; j < tensor.dimension(1); ++j)
-		{
-			const _TPixel &pixel = mat(i, j);
-			for (_TIndex k = 0; k < tensor.dimension(2); ++k)
-				tensor(i, j, k) = pixel[k];
-		}
+	typedef Eigen::DenseIndex _TIndex;
+	for (size_t i = 0; i < tensor.size(); ++i)
+		tensor(i) = mat.data[i];
 }
 
-template <typename _T>
-void copy_mat_tensor(const cv::Mat_<_T> &mat, typename tensorflow::TTypes<_T, 3>::Tensor tensor)
+template <typename _T, typename _TTensor, int Options>
+void copy_mat_tensor(const cv::Mat_<_T> &mat, Eigen::TensorMap<_TTensor, Options> tensor)
 {
-	typedef typename tensorflow::TTypes<_T>::Tensor::Index _TIndex;
-	typedef cv::Mat_<_T> _TMat;
-	assert(tensor.dimension(2) == 1);
-	for (_TIndex i = 0; i < tensor.dimension(0); ++i)
-		for (_TIndex j = 0; j < tensor.dimension(1); ++j)
-			tensor(i, j, 0) = mat(i, j);
+	typedef Eigen::DenseIndex _TIndex;
+	assert(tensor.dimension(2) <= 1);
+	for (size_t i = 0; i < tensor.size(); ++i)
+		tensor(i) = mat.data[i];
 }
 
-template <typename _T>
-void copy_tensor(typename tensorflow::TTypes<_T, 3>::ConstTensor src, typename tensorflow::TTypes<_T, 3>::Tensor dst)
+template <typename _TTensor, typename _T, int cn>
+_TTensor mat_tensor(const cv::Mat_<cv::Vec<_T, cn> > &mat)
 {
-	typedef typename tensorflow::TTypes<_T>::Tensor::Index _TIndex;
+	_TTensor tensor(mat.rows, mat.cols, mat.channels());
+	copy_mat_tensor<_T, cn>(mat, typename tensorflow::TTypes<_T, 3>::Tensor(tensor.data(), tensor.dimensions()));
+	return tensor;
+}
+
+template <typename _TTensor, typename _T>
+_TTensor mat_tensor(const cv::Mat_<_T> &mat)
+{
+	_TTensor tensor(mat.rows, mat.cols, mat.channels());
+	copy_mat_tensor<_T>(mat, typename tensorflow::TTypes<_T, 3>::Tensor(tensor.data(), tensor.dimensions()));
+	return tensor;
+}
+
+template <typename _TConstTensor, typename _TTensor, int Options>
+void copy_tensor(Eigen::TensorMap<_TConstTensor, Options> src, Eigen::TensorMap<_TTensor, Options> dst)
+{
+	typedef Eigen::DenseIndex _TIndex;
 	for (_TIndex i = 0; i < dst.dimension(0); ++i)
 		for (_TIndex j = 0; j < dst.dimension(1); ++j)
 			for (_TIndex k = 0; k < dst.dimension(2); ++k)

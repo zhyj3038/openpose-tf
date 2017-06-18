@@ -61,7 +61,7 @@ def get_cachedir(config):
     return os.path.join(basedir, 'cache', name)
 
 
-def get_skeleton(config):
+def get_limbs(config):
     dataset = os.path.expanduser(os.path.expandvars(config.get('cache', 'dataset')))
     return np.loadtxt(dataset + '.tsv', dtype=np.int, delimiter='\t')
 

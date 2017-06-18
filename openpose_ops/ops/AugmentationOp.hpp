@@ -58,7 +58,7 @@ void AugmentationOp<_TPixel, _TReal, _TInteger>::Compute(tensorflow::OpKernelCon
 	const tensorflow::Tensor& keypoints = context->input(2);
 	const auto size = context->input(3).vec<TInteger>();
 	const auto scale = context->input(4).vec<TReal>();
-	const auto rotate = context->input(5).scalar<TReal>();
+	const TReal rotate = context->input(5).scalar<TReal>()(0);
 
 	tensorflow::Tensor* image_result = NULL;
 	OP_REQUIRES_OK(context, context->allocate_output(0, tensorflow::TensorShape({size(0), size(1), image.shape().dim_size(2)}), &image_result));
@@ -68,10 +68,10 @@ void AugmentationOp<_TPixel, _TReal, _TInteger>::Compute(tensorflow::OpKernelCon
 	OP_REQUIRES_OK(context, context->allocate_output(2, keypoints.shape(), &keypoints_result));
 
 	const TReal _scale = std::uniform_real_distribution<TReal>(scale(0), scale(1))(random_);
-	const TReal _rotate = std::uniform_real_distribution<TReal>(-rotate(0), rotate(0))(random_);
+	const TReal _rotate = std::uniform_real_distribution<TReal>(-rotate, rotate)(random_);
 	try
 	{
-		openpose::augmentation<TPixel, TReal>(random_,
+		openpose::augmentation(random_,
 			image.tensor<TPixel, 3>(), mask.tensor<TPixel, 3>(), keypoints.tensor<TReal, 3>(),
 			_scale, _rotate,
 			image_result->tensor<TPixel, 3>(), mask_result->tensor<TPixel, 3>(), keypoints_result->tensor<TReal, 3>()

@@ -38,8 +38,8 @@ def draw_mask(segmentation, canvas):
             rle = [segmentation]
         m = np.squeeze(pycocotools.mask.decode(rle))
         assert m.shape[:2] == canvas.size[::-1]
-        for y, _m in enumerate(m):
-            for x, v in enumerate(_m):
+        for y, row in enumerate(m):
+            for x, v in enumerate(row):
                 if v:
                     pixels[x, y] = 0
 

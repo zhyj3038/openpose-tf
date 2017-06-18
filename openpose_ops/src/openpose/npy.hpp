@@ -20,25 +20,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace openpose
 {
-template <typename _T, typename _TTensor>
-void save_npy(const _TTensor &tensor, const std::string &path)
+template <typename _TData, typename _TTensor, int Options>
+void save_npy(Eigen::TensorMap<_TTensor, Options> tensor, const std::string &path)
 {
 	std::vector<unsigned int> shape(tensor.rank());
 	for (size_t i = 0; i < shape.size(); ++i)
 		shape[i] = tensor.dimension(i);
-	std::vector<_T> data(tensor.size());
+	std::vector<_TData> data(tensor.size());
 	for (size_t i = 0; i < data.size(); ++i)
 		data[i] = tensor(i);
 	cnpy::npy_save(path, &data.front(), &shape.front(), shape.size(), "w");
 }
 
-template <typename _T, typename _TTensor>
+template <typename _TData, typename _TTensor>
 _TTensor load_npy3(const std::string &path)
 {
 	cnpy::NpyArray arr = cnpy::npy_load(path);
 	assert(arr.shape.size() == 3);
 	_TTensor tensor(arr.shape[0], arr.shape[1], arr.shape[2]);
-	const _T *data = reinterpret_cast<const _T *>(arr.data);
+	const _TData *data = reinterpret_cast<const _TData *>(arr.data);
 	for (size_t i = 0; i < tensor.size(); ++i)
 		tensor(i) = data[i];
 	arr.destruct();

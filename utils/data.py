@@ -48,20 +48,20 @@ def decode_image_labels(paths, num_parts):
     return imageshape, image, mask, keypoints
 
 
-def data_augmentation(config, image, mask, keypoints, width, height):
+def data_augmentation(config, image, mask, keypoints, size_image, size_label):
     section = inspect.stack()[0][3]
     with tf.name_scope(section):
         scale = list(map(float, config.get(section, 'scale').split()))
         rotate = config.getfloat(section, 'rotate')
-        image, mask, keypoints = __ops__.augmentation(image, mask, keypoints, [height, width], scale, rotate)
+        image, mask, keypoints = __ops__.augmentation(image, mask, keypoints, size_image, scale, rotate)
     return image, mask, keypoints
 
 
-def data_augmentation_fixed(config, image, mask, keypoints, width, height):
+def data_augmentation_fixed(config, image, mask, keypoints, size_image, size_label):
     section = inspect.stack()[0][3]
     with tf.name_scope(section):
         if config.getboolean(section, 'random_flip_horizontally'):
-            image, mask, keypoints = preprocess.random_flip_horizontally(image, mask, keypoints, width)
+            image, mask, keypoints = preprocess.random_flip_horizontally(image, mask, keypoints, size_image[1])
         if config.getboolean(section, 'random_brightness'):
             image = tf.cond(
                 tf.random_uniform([]) < config.getfloat(section, 'enable_probability'),
@@ -98,13 +98,15 @@ def data_augmentation_fixed(config, image, mask, keypoints, width, height):
     return image, mask, keypoints
 
 
-def load_image_labels(config, paths, width, height, skeleton, num_parts):
+def load_data(config, paths, size_image, size_label, num_parts, limbs):
     with tf.name_scope('batch'):
         _, image, mask, keypoints = decode_image_labels(paths, num_parts)
-        image, mask, keypoints = data_augmentation(config, image, mask, keypoints, width, height)
+        image, mask, keypoints = data_augmentation(config, image, mask, keypoints, size_image, size_label)
         image = tf.cast(image, tf.float32)
         if config.getboolean('data_augmentation_fixed', 'enable'):
-            image, mask, keypoints = data_augmentation_fixed(config, image, mask, keypoints, width, height)
+            image, mask, keypoints = data_augmentation_fixed(config, image, mask, keypoints, size_image, size_label)
         image = tf.clip_by_value(image, 0, 255)
-        mask = tf.to_float(mask > 0)
-    return image, (mask,)
+        mask = tf.to_float(mask > 127)
+    sigma_parts = config.getfloat('label', 'sigma_parts')
+    sigma_limbs = config.getfloat('label', 'sigma_limbs')
+    return image, mask, keypoints, __ops__.label(size_image, size_label, keypoints, limbs, sigma_parts, sigma_limbs)
