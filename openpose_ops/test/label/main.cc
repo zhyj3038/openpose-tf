@@ -30,6 +30,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <openpose/tsv.hpp>
 #include <openpose/render.hpp>
 
+std::string get_title(const Eigen::DenseIndex index, const Eigen::DenseIndex limbs, const Eigen::DenseIndex parts)
+{
+	const Eigen::DenseIndex offset = limbs * 2;
+	if (index == offset + parts)
+		return "background";
+	else if (index < offset)
+	{
+		const std::string xy = index % 2 ? "y" : "x";
+		return (boost::format("limb %d/%d ") % (index / 2 + 1) % limbs).str() + xy;
+	}
+	else
+		return (boost::format("part %d/%d") % (index - offset + 1) % parts).str();
+}
+
 template <typename _TPixel, typename _TInteger, typename _TReal>
 void test(const std::string &path_image, const std::string &path_keypoints, const std::string &path_limbs, const std::pair<size_t, size_t> downsample, const _TReal sigma_parts, const _TReal sigma_limbs)
 {
@@ -52,7 +66,7 @@ void test(const std::string &path_image, const std::string &path_keypoints, cons
 	for (_TIndex index = 0; index < _label.dimension(2); ++index)
 	{
 		const cv::Mat canvas = openpose::render(image, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_label.data(), _label.dimensions()), index);
-		cv::imshow((boost::format("%d") % index).str(), canvas);
+		cv::imshow(get_title(index, _limbs.dimension(0), _keypoints.dimension(1)), canvas);
 		cv::waitKey(0);
 		cv::destroyAllWindows();
 	}

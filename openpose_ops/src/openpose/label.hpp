@@ -35,7 +35,7 @@ template <typename _TConstTensorReal, typename _TConstTensorInteger, typename _T
 void make_label(Eigen::TensorMap<_TConstTensorReal, Options> keypoints, Eigen::TensorMap<_TConstTensorInteger, Options> limbs,
 	const typename _TConstTensorReal::Scalar sigma_limbs, const typename _TConstTensorReal::Scalar sigma_parts,
 	const typename _TConstTensorInteger::Scalar height, const typename _TConstTensorInteger::Scalar width,
-	Eigen::TensorMap<_TTensor, Options> label)
+	Eigen::TensorMap<_TTensor, Options> label, const typename _TConstTensorReal::Scalar threshold = -log(0.01))
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef typename std::remove_const<typename _TConstTensorReal::Scalar>::type _TReal;
@@ -113,7 +113,7 @@ void make_label(Eigen::TensorMap<_TConstTensorReal, Options> keypoints, Eigen::T
 						const _TReal diff_x = keypoints(index, part, 0) - x;
 						const _TReal diff_y = keypoints(index, part, 1) - y;
 						const _TReal exponent = (diff_x * diff_x + diff_y * diff_y) / 2 / sigma_parts2;
-						if(exponent > 4.6052) //ln(100) = -ln(1%)
+						if(exponent > threshold)
 							continue;
 						label(gy, gx, channel) += exp(-exponent);
 						if (label(gy, gx, channel) > 1)
