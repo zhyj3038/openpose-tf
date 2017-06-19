@@ -30,22 +30,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <openpose/tsv.hpp>
 #include <openpose/render.hpp>
 
-std::string get_title(const Eigen::DenseIndex index, const Eigen::DenseIndex limbs, const Eigen::DenseIndex parts)
+std::string get_title_limbs(const Eigen::DenseIndex index, const Eigen::DenseIndex total)
 {
-	const Eigen::DenseIndex offset = limbs * 2;
-	if (index == offset + parts)
-		return "background";
-	else if (index < offset)
-	{
-		const std::string xy = index % 2 ? "y" : "x";
-		return (boost::format("limb %d/%d ") % (index / 2 + 1) % limbs).str() + xy;
-	}
+	assert(0 <= index && index < total * 2);
+	const std::string xy = index % 2 ? "y" : "x";
+	return (boost::format("limb %d/%d ") % (index / 2 + 1) % total).str() + xy;
+
+}
+
+std::string get_title_parts(const Eigen::DenseIndex index, const Eigen::DenseIndex total)
+{
+	assert(0 <= index && index <= total);
+	if (index < total)
+		return (boost::format("part %d/%d") % (index + 1) % total).str();
 	else
-		return (boost::format("part %d/%d") % (index - offset + 1) % parts).str();
+		return "background";
 }
 
 template <typename _TPixel, typename _TInteger, typename _TReal>
-void test(const std::string &path_image, const std::string &path_keypoints, const std::string &path_limbs, const std::pair<size_t, size_t> downsample, const _TReal sigma_parts, const _TReal sigma_limbs)
+void test(const std::string &path_image, const std::string &path_keypoints, const std::string &path_limbs_index, const std::pair<size_t, size_t> downsample, const _TReal sigma_parts, const _TReal sigma_limbs)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef Eigen::Tensor<_TInteger, 2, Eigen::RowMajor, _TIndex> _TTensorInteger;
@@ -54,19 +57,30 @@ void test(const std::string &path_image, const std::string &path_keypoints, cons
 	typedef cv::Mat_<_TVec3> _TMat3;
 
 	const _TMat3 image = cv::imread(path_image, CV_LOAD_IMAGE_COLOR);
-	const _TTensorReal _keypoints = openpose::load_npy3<tensorflow::int32, _TTensorReal>(path_keypoints);
-	const _TTensorInteger _limbs = openpose::load_tsv<_TTensorInteger>(path_limbs);
-	_TTensorReal _label(image.rows / downsample.first, image.cols / downsample.second, _limbs.dimension(0) * 2 + _keypoints.dimension(1) + 1);
-	openpose::make_label(
-		typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints.data(), _keypoints.dimensions()),
-		typename tensorflow::TTypes<_TInteger, 2>::ConstTensor(_limbs.data(), _limbs.dimensions()),
-		sigma_limbs, sigma_parts, image.rows, image.cols,
-		typename tensorflow::TTypes<_TReal, 3>::Tensor(_label.data(), _label.dimensions())
+	const _TTensorReal keypoints = openpose::load_npy3<tensorflow::int32, _TTensorReal>(path_keypoints);
+	const _TTensorInteger limbs_index = openpose::load_tsv<_TTensorInteger>(path_limbs_index);
+	_TTensorReal _limbs(image.rows / downsample.first, image.cols / downsample.second, limbs_index.dimension(0) * 2);
+	_TTensorReal _parts(image.rows / downsample.first, image.cols / downsample.second, keypoints.dimension(1) + 1);
+	typename tensorflow::TTypes<_TReal, 3>::ConstTensor _keypoints(keypoints.data(), keypoints.dimensions());
+	openpose::make_limbs(_keypoints, typename tensorflow::TTypes<_TInteger, 2>::ConstTensor(limbs_index.data(), limbs_index.dimensions()),
+		sigma_limbs, image.rows, image.cols,
+		typename tensorflow::TTypes<_TReal, 3>::Tensor(_limbs.data(), _limbs.dimensions())
 	);
-	for (_TIndex index = 0; index < _label.dimension(2); ++index)
+	openpose::make_parts(_keypoints,
+		sigma_parts, image.rows, image.cols,
+		typename tensorflow::TTypes<_TReal, 3>::Tensor(_parts.data(), _parts.dimensions())
+	);
+	for (_TIndex index = 0; index < _limbs.dimension(2); ++index)
 	{
-		const cv::Mat canvas = openpose::render(image, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_label.data(), _label.dimensions()), index);
-		cv::imshow(get_title(index, _limbs.dimension(0), _keypoints.dimension(1)), canvas);
+		const cv::Mat canvas = openpose::render(image, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_limbs.data(), _limbs.dimensions()), index);
+		cv::imshow(get_title_limbs(index, limbs_index.dimension(0)), canvas);
+		cv::waitKey(0);
+		cv::destroyAllWindows();
+	}
+	for (_TIndex index = 0; index < _parts.dimension(2); ++index)
+	{
+		const cv::Mat canvas = openpose::render(image, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_parts.data(), _parts.dimensions()), index);
+		cv::imshow(get_title_parts(index, keypoints.dimension(1)), canvas);
 		cv::waitKey(0);
 		cv::destroyAllWindows();
 	}

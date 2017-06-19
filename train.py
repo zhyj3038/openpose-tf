@@ -36,18 +36,29 @@ def summary_scalar(config):
                 t = reduce(t)
                 tf.logging.warn(name + ' is not a scalar tensor, reducing by ' + reduce.__name__)
             tf.summary.scalar(name, t)
+            tf.logging.warn('add summary scalar ' + name)
     except (configparser.NoSectionError, configparser.NoOptionError):
         tf.logging.warn(inspect.stack()[0][3] + ' disabled')
 
 
 def summary_image(config):
     try:
+        image_max = config.getint('summary', 'image_max')
         for t in utils.match_tensor(config.get('summary', 'image')):
             name = t.op.name
-            channels = t.get_shape()[-1].value
-            if channels not in (1, 3, 4):
-                t = tf.expand_dims(tf.reduce_sum(t, -1), -1)
-            tf.summary.image(name, t, config.getint('summary', 'image_max'))
+            shape = t.get_shape().as_list()
+            if len(shape) == 4:
+                channels = shape[-1]
+                if channels not in (1, 3, 4):
+                    with tf.name_scope(name + '_c'):
+                        for c in range(channels):
+                            _t = t[:, :, :, c:c + 1]
+                            tf.summary.image('c%d' % c, _t, image_max)
+                else:
+                    tf.summary.image(name, t, image_max)
+                tf.logging.warn('add summary image ' + name)
+            else:
+                tf.logging.warn('rank of %s is not 4' % name)
     except (configparser.NoSectionError, configparser.NoOptionError):
         tf.logging.warn(inspect.stack()[0][3] + ' disabled')
 
@@ -55,7 +66,9 @@ def summary_image(config):
 def summary_histogram(config):
     try:
         for t in utils.match_tensor(config.get('summary', 'histogram')):
-            tf.summary.histogram(t.op.name, t)
+            name = t.op.name
+            tf.summary.histogram(name, t)
+            tf.logging.warn('add summary histogram ' + name)
     except (configparser.NoSectionError, configparser.NoOptionError):
         tf.logging.warn(inspect.stack()[0][3] + ' disabled')
 
@@ -87,7 +100,7 @@ def main():
     cachedir = utils.get_cachedir(config)
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
-    limbs = utils.get_limbs(config)
+    limbs_index = utils.get_limbs_index(config)
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     size_label = utils.calc_backbone_size(config, size_image)
     tf.logging.warn('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
@@ -95,19 +108,19 @@ def main():
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
     with tf.name_scope('batch'):
-        image, mask, _, label = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs)
+        image, mask, _, limbs, parts = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs_index)
         with tf.name_scope('per_image_standardization'):
             image = tf.image.per_image_standardization(image)
-        batch = tf.train.shuffle_batch([image, mask, label], batch_size=args.batch_size,
+        batch = tf.train.shuffle_batch([image, mask, limbs, parts], batch_size=args.batch_size,
             capacity=config.getint('queue', 'capacity'), min_after_dequeue=config.getint('queue', 'min_after_dequeue'), num_threads=multiprocessing.cpu_count()
         )
-        image, mask, label = batch
+        image, mask, limbs, parts = batch
         with tf.name_scope('output'):
-            image, mask, label = tf.identity(image, 'image'), tf.identity(mask, 'mask'), tf.identity(label, 'label')
+            image, mask, limbs, parts = tf.identity(image, 'image'), tf.squeeze(mask, name='mask'), tf.identity(limbs, 'limbs'), tf.identity(parts, 'parts')
     global_step = tf.contrib.framework.get_or_create_global_step()
     net = utils.parse_attr(config.get('config', 'backbone'))(config, image, train=True)
     assert tuple(net.get_shape().as_list()[1:3]) == size_label
-    utils.parse_attr(config.get('config', 'stages'))(config, len(limbs), num_parts, net, mask, label)
+    utils.parse_attr(config.get('config', 'stages'))(config, net, limbs, parts, mask)
     with tf.name_scope('total_loss') as name:
         total_loss = tf.losses.get_total_loss(name=name)
     variables_to_restore = slim.get_variables_to_restore(exclude=args.exclude)
@@ -156,7 +169,7 @@ def make_args():
     parser.add_argument('-o', '--optimizer', default='adam')
     parser.add_argument('-n', '--logname', default=time.strftime('%Y-%m-%d_%H-%M-%S'), help='the name for TensorBoard')
     parser.add_argument('-g', '--gradient_clip', default=0, type=float, help='gradient clip')
-    parser.add_argument('-lr', '--learning_rate', default=1e-6, type=float, help='learning rate')
+    parser.add_argument('-lr', '--learning_rate', default=5e-5, type=float, help='learning rate')
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--summary_secs', default=30, type=int, help='seconds to save summaries')
     parser.add_argument('--save_secs', default=600, type=int, help='seconds to save model')

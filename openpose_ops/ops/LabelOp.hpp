@@ -47,19 +47,20 @@ void LabelOp<_TReal, _TInteger>::Compute(tensorflow::OpKernelContext *context)
 	const auto size_image = context->input(0).vec<TInteger>();
 	const auto size_label = context->input(1).vec<TInteger>();
 	const tensorflow::Tensor &keypoints = context->input(2);
-	const tensorflow::Tensor &limbs = context->input(3);
+	const tensorflow::Tensor &limbs_index = context->input(3);
 	const TReal sigma_parts = context->input(4).scalar<TReal>()(0);
 	const TReal sigma_limbs = context->input(5).scalar<TReal>()(0);
 
-	tensorflow::Tensor *label = NULL;
-	OP_REQUIRES_OK(context, context->allocate_output(0, tensorflow::TensorShape({size_label(0), size_label(1), limbs.shape().dim_size(0) * 2 + keypoints.shape().dim_size(1) + 1}), &label));
+	tensorflow::Tensor *_limbs = NULL;
+	OP_REQUIRES_OK(context, context->allocate_output(0, tensorflow::TensorShape({size_label(0), size_label(1), limbs_index.shape().dim_size(0) * 2}), &_limbs));
+	tensorflow::Tensor *_parts = NULL;
+	OP_REQUIRES_OK(context, context->allocate_output(1, tensorflow::TensorShape({size_label(0), size_label(1), keypoints.shape().dim_size(1) + 1}), &_parts));
 
 	try
 	{
-		openpose::make_label(
-			keypoints.tensor<TReal, 3>(), limbs.tensor<TInteger, 2>(),
-			sigma_limbs, sigma_parts, size_image(0), size_image(1),
-			label->tensor<TReal, 3>());
+		auto _keypoints = keypoints.tensor<TReal, 3>();
+		openpose::make_limbs(_keypoints, limbs_index.tensor<TInteger, 2>(), sigma_limbs, size_image(0), size_image(1), _limbs->tensor<TReal, 3>());
+		openpose::make_parts(_keypoints, sigma_parts, size_image(0), size_image(1), _parts->tensor<TReal, 3>());
 	}
 	catch (...)
 	{

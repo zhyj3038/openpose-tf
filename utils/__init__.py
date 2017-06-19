@@ -68,7 +68,7 @@ def get_logdir(config):
     return os.path.join(basedir, backbone, stages)
 
 
-def get_limbs(config):
+def get_limbs_index(config):
     dataset = os.path.expanduser(os.path.expandvars(config.get('cache', 'dataset')))
     return np.loadtxt(dataset + '.tsv', dtype=np.int, delimiter='\t')
 

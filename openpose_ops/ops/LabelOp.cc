@@ -25,17 +25,19 @@ REGISTER_OP("Label")
 	.Input("size_image: TInteger")
 	.Input("size_label: TInteger")
 	.Input("keypoints: TReal")
-	.Input("limbs: TInteger")
+	.Input("limbs_index: TInteger")
 	.Input("sigma_parts: TReal")
 	.Input("sigma_limbs: TReal")
-	.Output("label: TReal")
+	.Output("limbs: TReal")
+	.Output("parts: TReal")
 	.SetShapeFn([](tensorflow::shape_inference::InferenceContext *c) {
 		tensorflow::shape_inference::ShapeHandle keypoints;
 		TF_RETURN_IF_ERROR(c->WithRank(c->input(2), 3, &keypoints));
-		tensorflow::shape_inference::ShapeHandle limbs;
-		TF_RETURN_IF_ERROR(c->WithRank(c->input(3), 2, &limbs));
+		tensorflow::shape_inference::ShapeHandle limbs_index;
+		TF_RETURN_IF_ERROR(c->WithRank(c->input(3), 2, &limbs_index));
 
-		set_shape(c, 0, 1, c->MakeDim(c->Value(c->Dim(limbs, 0)) * 2 + c->Value(c->Dim(keypoints, 1)) + 1));
+		set_shape(c, 0, 1, c->MakeDim(c->Value(c->Dim(limbs_index, 0)) * 2));
+		set_shape(c, 1, 1, c->MakeDim(c->Value(c->Dim(keypoints, 1)) + 1));
 		return tensorflow::Status::OK();
 	})
 ;

@@ -26,7 +26,7 @@ import utils.visualize
 
 
 def main():
-    limbs = utils.get_limbs(config)
+    limbs_index = utils.get_limbs_index(config)
     cachedir = utils.get_cachedir(config)
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
@@ -47,7 +47,7 @@ def main():
             ax = fig.gca()
             utils.visualize.draw_mask(image, mask)
             ax.imshow(image)
-            utils.visualize.draw_keypoints(ax, keypoints, limbs, args.colors, args.alpha)
+            utils.visualize.draw_keypoints(ax, keypoints, limbs_index, args.colors, args.alpha)
             plt.show()
 
 
@@ -57,7 +57,7 @@ def make_args():
     parser.add_argument('-p', '--profile', nargs='+', default=['train', 'val'])
     parser.add_argument('--colors', nargs='+', default=['r', 'w'])
     parser.add_argument('--level', default='info', help='logging level')
-    parser.add_argument('--alpha', default=0.5)
+    parser.add_argument('--alpha', type=float, default=0.5)
     return parser.parse_args()
 
 if __name__ == '__main__':

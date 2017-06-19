@@ -80,7 +80,7 @@ cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &im
 	typedef cv::Vec<_TPixel, cn> _TVec;
 	typedef cv::Mat_<_TVec> _TMat;
 
-	_TMat mat(label.dimension(0), label.dimension(1), CV_8UC1);
+	_TMat mat(label.dimension(0), label.dimension(1));
 	for (_TIndex i = 0; i < mat.rows; ++i)
 		for (_TIndex j = 0; j < mat.cols; ++j)
 			mat(i, j) = label(i, j, index) * 255;

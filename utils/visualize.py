@@ -29,14 +29,14 @@ def draw_mask(image, mask):
                 image[y, x] = 0
 
 
-def draw_keypoints(ax, keypoints, limbs, colors=['r', 'w'], alpha=0.3):
-    limb_colors = [prop['color'] for _, prop in zip(limbs, itertools.cycle(plt.rcParams['axes.prop_cycle']))]
+def draw_keypoints(ax, keypoints, limbs_index, colors=['r', 'w'], alpha=0.3):
+    limb_colors = [prop['color'] for _, prop in zip(limbs_index, itertools.cycle(plt.rcParams['axes.prop_cycle']))]
     for _keypoints in keypoints:
         for i, (x, y, v) in enumerate(_keypoints):
             assert v >= 0
             if v > 0:
                 plt.text(x, y, str(i), bbox=dict(facecolor=colors[v - 1], alpha=alpha))
-        for i, (i1, i2) in enumerate(limbs):
+        for i, (i1, i2) in enumerate(limbs_index):
             x1, y1, v1 = _keypoints[i1].T
             x2, y2, v2 = _keypoints[i2].T
             if v1 > 0 and v2 > 0:

@@ -30,14 +30,12 @@ import utils.visualize
 
 
 class Visualizer(QtGui.QDialog):
-    def __init__(self, image, mask, label, num_limbs, num_parts):
+    def __init__(self, name, image, mask, feature):
         super(Visualizer, self).__init__()
-        assert label.shape[2] == num_limbs * 2 + num_parts + 1
         utils.visualize.draw_mask(image, mask.astype(np.uint8) * 255)
+        self.name = name
         self.image = image
-        self.label = label
-        self.num_limbs = num_limbs
-        self.num_parts = num_parts
+        self.feature = feature
         
         layout = QtGui.QVBoxLayout(self)
         fig = matplotlib.pyplot.Figure()
@@ -47,7 +45,7 @@ class Visualizer(QtGui.QDialog):
         toolbar = matplotlib.backends.backend_qt4agg.NavigationToolbar2QT(self.canvas, self)
         layout.addWidget(toolbar)
         self.slider = QtGui.QSlider(QtCore.Qt.Horizontal, self)
-        self.slider.setRange(0, label.shape[2] - 1)
+        self.slider.setRange(0, feature.shape[2] - 1)
         layout.addWidget(self.slider)
         self.slider.valueChanged[int].connect(self.on_progress)
         
@@ -61,26 +59,19 @@ class Visualizer(QtGui.QDialog):
             self.last.remove()
         except AttributeError:
             pass
-        feature = self.label[:, :, index]
+        feature = self.feature[:, :, index]
         feature = scipy.misc.imresize(feature, self.image.shape[:2])
         self.last = self.ax.imshow(feature, alpha=args.alpha)
         self.canvas.draw()
         matplotlib.pyplot.draw()
-        offset = self.num_limbs * 2
-        if index == self.label.shape[2] - 1:
-            self.setWindowTitle('background')
-        elif index < offset:
-            xy = 'y' if index % 2 else 'x'
-            self.setWindowTitle('limb %d/%d ' % (index // 2 + 1, self.num_limbs) + xy)
-        else:
-            self.setWindowTitle('part %d/%d' % (index - offset + 1, self.num_parts))
+        self.setWindowTitle('%s %d/%d' % (self.name, index + 1, self.feature.shape[2]))
 
 
 def main():
     cachedir = utils.get_cachedir(config)
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
-    limbs = utils.get_limbs(config)
+    limbs_index = utils.get_limbs_index(config)
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     size_label = utils.calc_backbone_size(config, size_image)
     tf.logging.info('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
@@ -88,16 +79,21 @@ def main():
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
     with tf.Session() as sess:
-        data = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs)
+        data = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs_index)
         tf.global_variables_initializer().run()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess, coord)
         while True:
-            image, mask, _, label = sess.run(data)
+            image, mask, _, limbs, parts = sess.run(data)
             assert image.shape[:2] == size_image
-            assert label.shape[:2] == size_label
+            assert limbs.shape[:2] == size_label
+            assert parts.shape[:2] == size_label
             image = image.astype(np.uint8)
-            dialog = Visualizer(image, mask, label, len(limbs), num_parts)
+            assert limbs.shape[2] == len(limbs_index) * 2
+            assert parts.shape[2] == num_parts + 1
+            dialog = Visualizer('limbs', image, mask, limbs)
+            dialog.exec()
+            dialog = Visualizer('parts', image, mask, parts)
             dialog.exec()
         coord.request_stop()
         coord.join(threads)
@@ -107,7 +103,7 @@ def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
     parser.add_argument('-p', '--profile', nargs='+', default=['train', 'val'])
-    parser.add_argument('--alpha', default=0.5)
+    parser.add_argument('--alpha', type=float, default=0.5)
     parser.add_argument('--level', default='info', help='logging level')
     return parser.parse_args()
 

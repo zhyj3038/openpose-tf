@@ -32,31 +32,31 @@ std::pair<_T, _T> calc_norm_vec(const _T x, const _T y)
 }
 
 template <typename _TConstTensorReal, typename _TConstTensorInteger, typename _TTensor, int Options>
-void make_label(Eigen::TensorMap<_TConstTensorReal, Options> keypoints, Eigen::TensorMap<_TConstTensorInteger, Options> limbs,
-	const typename _TConstTensorReal::Scalar sigma_limbs, const typename _TConstTensorReal::Scalar sigma_parts,
-	const typename _TConstTensorInteger::Scalar height, const typename _TConstTensorInteger::Scalar width,
-	Eigen::TensorMap<_TTensor, Options> label, const typename _TConstTensorReal::Scalar threshold = -log(0.01))
+void make_limbs(Eigen::TensorMap<_TConstTensorReal, Options> keypoints, Eigen::TensorMap<_TConstTensorInteger, Options> limbs_index,
+	const typename _TConstTensorReal::Scalar sigma,
+	const Eigen::DenseIndex height, const Eigen::DenseIndex width,
+	Eigen::TensorMap<_TTensor, Options> label)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef typename std::remove_const<typename _TConstTensorReal::Scalar>::type _TReal;
 	typedef typename std::remove_const<typename _TConstTensorInteger::Scalar>::type _TInteger;
 	typedef Eigen::Matrix<size_t, Eigen::Dynamic, Eigen::Dynamic> _TMatrixCount;
 
-	assert(limbs.dimension(1) == 2);
+	assert(limbs_index.dimension(1) == 2);
 	for (_TIndex gy = 0; gy < label.dimension(0); ++gy)
 		for (_TIndex gx = 0; gx < label.dimension(1); ++gx)
-			for (_TIndex channel = 0; channel < label.dimension(2) - 1; ++channel)
+			for (_TIndex channel = 0; channel < label.dimension(2); ++channel)
 				label(gy, gx, channel) = 0;
 	const _TReal grid_height = (_TReal)height / label.dimension(0);
 	const _TReal grid_width = (_TReal)width / label.dimension(1);
 	const _TReal grid_height2 = grid_height / 2;
 	const _TReal grid_width2 = grid_width / 2;
-	for (_TIndex limb = 0; limb < limbs.dimension(0); ++limb)
+	for (_TIndex limb = 0; limb < limbs_index.dimension(0); ++limb)
 	{
 		const _TInteger channel_x = limb * 2;
 		const _TInteger channel_y = channel_x + 1;
-		const _TInteger p1 = limbs(limb, 0);
-		const _TInteger p2 = limbs(limb, 1);
+		const _TInteger p1 = limbs_index(limb, 0);
+		const _TInteger p2 = limbs_index(limb, 1);
 		_TMatrixCount count = _TMatrixCount::Constant(label.dimension(0), label.dimension(1), 0);
 		for (_TIndex index = 0; index < keypoints.dimension(0); ++index)
 			if (keypoints(index, p1, 2) > 0 && keypoints(index, p2, 2) > 0)
@@ -66,10 +66,10 @@ void make_label(Eigen::TensorMap<_TConstTensorReal, Options> keypoints, Eigen::T
 				const std::pair<_TReal, _TReal> norm_vec = calc_norm_vec(p2x - p1x, p2y - p1y);
 				const std::pair<_TReal, _TReal> range_x = std::minmax(p1x, p2x);
 				const std::pair<_TReal, _TReal> range_y = std::minmax(p1y, p2y);
-				const _TIndex gx_min = round((range_x.first - sigma_limbs) / grid_width);
-				const _TIndex gx_max = round((range_x.second + sigma_limbs) / grid_width);
-				const _TIndex gy_min = round((range_y.first - sigma_limbs) / grid_height);
-				const _TIndex gy_max = round((range_y.second + sigma_limbs) / grid_height);
+				const _TIndex gx_min = round((range_x.first - sigma) / grid_width);
+				const _TIndex gx_max = round((range_x.second + sigma) / grid_width);
+				const _TIndex gy_min = round((range_y.first - sigma) / grid_height);
+				const _TIndex gy_max = round((range_y.second + sigma) / grid_height);
 				for (_TIndex gy = std::max<_TIndex>(gy_min, 0); gy < std::min(gy_max, label.dimension(0)); ++gy)
 					for (_TIndex gx = std::max<_TIndex>(gx_min, 0); gx < std::min(gx_max, label.dimension(1)); ++gx)
 					{
@@ -77,7 +77,7 @@ void make_label(Eigen::TensorMap<_TConstTensorReal, Options> keypoints, Eigen::T
 						const _TReal y = gy * grid_height + grid_height2;
 						const _TReal vx = x - p1x, vy = y - p1y;
 						const _TReal dist = std::abs(vx * norm_vec.second - vy * norm_vec.first);
-						if (dist <= sigma_limbs)
+						if (dist <= sigma)
 						{
 							label(gy, gx, channel_x) += vx;
 							label(gy, gx, channel_y) += vy;
@@ -96,8 +96,28 @@ void make_label(Eigen::TensorMap<_TConstTensorReal, Options> keypoints, Eigen::T
 				}
 			}
 	}
-	const _TIndex offset = limbs.dimension(0) * 2;
-	const _TReal sigma_parts2 = sigma_parts * sigma_parts;
+}
+
+template <typename _TConstTensorReal, typename _TTensor, int Options>
+void make_parts(Eigen::TensorMap<_TConstTensorReal, Options> keypoints,
+	const typename _TConstTensorReal::Scalar sigma,
+	const Eigen::DenseIndex height, const Eigen::DenseIndex width,
+	Eigen::TensorMap<_TTensor, Options> label, const typename _TConstTensorReal::Scalar threshold = -log(0.01))
+{
+	typedef Eigen::DenseIndex _TIndex;
+	typedef typename std::remove_const<typename _TConstTensorReal::Scalar>::type _TReal;
+	typedef Eigen::Matrix<size_t, Eigen::Dynamic, Eigen::Dynamic> _TMatrixCount;
+
+	assert(keypoints.dimension(1) + 1 == label.dimension(2));
+	for (_TIndex gy = 0; gy < label.dimension(0); ++gy)
+		for (_TIndex gx = 0; gx < label.dimension(1); ++gx)
+			for (_TIndex channel = 0; channel < keypoints.dimension(1); ++channel)
+				label(gy, gx, channel) = 0;
+	const _TReal grid_height = (_TReal)height / label.dimension(0);
+	const _TReal grid_width = (_TReal)width / label.dimension(1);
+	const _TReal grid_height2 = grid_height / 2;
+	const _TReal grid_width2 = grid_width / 2;
+	const _TReal sigma2 = sigma * sigma;
 	for (_TIndex gy = 0; gy < label.dimension(0); ++gy)
 		for (_TIndex gx = 0; gx < label.dimension(1); ++gx)
 		{
@@ -106,24 +126,23 @@ void make_label(Eigen::TensorMap<_TConstTensorReal, Options> keypoints, Eigen::T
 			_TReal maximum = 0;
 			for (_TIndex part = 0; part < keypoints.dimension(1); ++part)
 			{
-				const _TIndex channel = offset + part;
 				for (_TIndex index = 0; index < keypoints.dimension(0); ++index)
 					if (keypoints(index, part, 2) > 0)
 					{
 						const _TReal diff_x = keypoints(index, part, 0) - x;
 						const _TReal diff_y = keypoints(index, part, 1) - y;
-						const _TReal exponent = (diff_x * diff_x + diff_y * diff_y) / 2 / sigma_parts2;
+						const _TReal exponent = (diff_x * diff_x + diff_y * diff_y) / 2 / sigma2;
 						if(exponent > threshold)
 							continue;
-						label(gy, gx, channel) += exp(-exponent);
-						if (label(gy, gx, channel) > 1)
-							label(gy, gx, channel) = 1;
-						maximum = std::max<_TReal>(label(gy, gx, channel), maximum);
+						label(gy, gx, part) += exp(-exponent);
+						if (label(gy, gx, part) > 1)
+							label(gy, gx, part) = 1;
+						maximum = std::max<_TReal>(label(gy, gx, part), maximum);
 					}
-				assert(0 <= label(gy, gx, channel) <= 1);
+				assert(0 <= label(gy, gx, part) <= 1);
 			}
 			assert(0 <= maximum <= 1);
-			label(gy, gx, label.dimension(2) - 1) = 1 - maximum;
+			label(gy, gx, keypoints.dimension(1)) = 1 - maximum;
 		}
 }
 }

@@ -30,7 +30,7 @@ def main():
     cachedir = utils.get_cachedir(config)
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
-    limbs = utils.get_limbs(config)
+    limbs_index = utils.get_limbs_index(config)
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     size_label = (size_image[0] // 8, size_image[1] // 8)
     tf.logging.info('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
@@ -40,8 +40,8 @@ def main():
     tf.logging.warn('num_examples=%d' % num_examples)
     with tf.Session() as sess:
         with tf.name_scope('batch'):
-            image, mask, _, label = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs)
-            batch = tf.train.shuffle_batch([image, mask, label], batch_size=batch_size,
+            image, mask, _, limbs, parts = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs_index)
+            batch = tf.train.shuffle_batch([image, mask, limbs, parts], batch_size=batch_size,
                 capacity=config.getint('queue', 'capacity'), min_after_dequeue=config.getint('queue', 'min_after_dequeue'), num_threads=multiprocessing.cpu_count()
             )
         tf.global_variables_initializer().run()
@@ -50,9 +50,10 @@ def main():
         while True:
             _batch = sess.run(batch)
             fig, axes = plt.subplots(args.rows, args.cols)
-            for ax, image, mask, label in zip(*([axes.flat] + _batch)):
+            for ax, image, mask, limbs, parts in zip(*([axes.flat] + _batch)):
                 assert image.shape[:2] == size_image
-                assert label.shape[:2] == size_label
+                assert limbs.shape[:2] == size_label
+                assert parts.shape[:2] == size_label
                 image = image.astype(np.uint8)
                 utils.visualize.draw_mask(image, mask.astype(np.uint8) * 255)
                 ax.imshow(image)
