@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import numbers
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
@@ -22,21 +23,22 @@ import tensorflow.contrib.slim as slim
 
 def make_loss(config, net, mask, label, stage, branch, name='loss'):
     shape = net.get_shape().as_list()
-    assert label.get_shape().as_list() == shape
-    _shape = mask.get_shape().as_list()
     assert mask.get_shape().as_list() == shape[:3]
-    norm = tf.norm(net - label, axis=-1)
-    loss = tf.reduce_mean(mask * norm, name=name)
+    assert label.get_shape().as_list() == shape
+    dist = tf.square(net - label)
+    loss = tf.reduce_sum(dist, name=name)
     tf.add_to_collection(tf.GraphKeys.LOSSES, loss)
 
 
-def original(config, net, limbs, parts, mask=None, stages=6, scope='stages'):
+def original(config, net, limbs, parts, mask=None, stages=6, channels=128, scope='stages'):
     with tf.variable_scope(scope):
         image = tf.identity(net, 'image')
         net = image
         if mask is None:
-            assert isinstance(limbs, int)
-            assert isinstance(parts, int)
+            assert isinstance(limbs, numbers.Integral)
+            assert isinstance(parts, numbers.Integral)
+            limbs = limbs * 2
+            parts = parts + 1
         else:
             with tf.name_scope('labels'):
                 mask = tf.identity(mask, 'mask')
@@ -66,13 +68,12 @@ def original(config, net, limbs, parts, mask=None, stages=6, scope='stages'):
                                     index += 1
                             net = slim.layers.conv2d(net, 512, kernel_size=[1, 1], scope='conv%d' % index)
                         else:
-                            with slim.arg_scope([slim.layers.conv2d], num_outputs=128, kernel_size=[7, 7]):
+                            with slim.arg_scope([slim.layers.conv2d], num_outputs=channels, kernel_size=[7, 7]):
                                 for _ in range(5):
                                     net = slim.layers.conv2d(net, scope='conv%d' % index)
                                     index += 1
                                 net = slim.layers.conv2d(net, kernel_size=[1, 1], scope='conv%d' % index)
-                        channels = label if mask is None else label.get_shape().as_list()[-1]
-                        net = slim.layers.conv2d(net, channels, kernel_size=[1, 1], activation_fn=None, scope='conv')
+                        net = slim.layers.conv2d(net, label if mask is None else label.get_shape().as_list()[-1], kernel_size=[1, 1], activation_fn=None, scope='conv')
                         net = tf.identity(net, 'output')
                         if mask is not None:
                             with tf.name_scope('loss') as name:

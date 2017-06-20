@@ -38,11 +38,11 @@ REGISTER_OP("Augmentation")
 	.SetShapeFn([](tensorflow::shape_inference::InferenceContext *c) {
 		tensorflow::shape_inference::ShapeHandle image;
 		TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 3, &image));
-		set_shape(c, 0, 3, c->Dim(image, 2));
+		set_shape(c, 0, 3, {c->Dim(image, 2)});
 
 		tensorflow::shape_inference::ShapeHandle mask;
 		TF_RETURN_IF_ERROR(c->WithRank(c->input(1), 3, &mask));
-		set_shape(c, 1, 4, c->Dim(mask, 2));
+		set_shape(c, 1, 4, {c->Dim(mask, 2)});
 
 		c->set_output(2, c->input(2));
 		return tensorflow::Status::OK();

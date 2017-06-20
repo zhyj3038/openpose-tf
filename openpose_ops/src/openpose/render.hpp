@@ -80,10 +80,13 @@ cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &im
 	typedef cv::Vec<_TPixel, cn> _TVec;
 	typedef cv::Mat_<_TVec> _TMat;
 
-	_TMat mat(label.dimension(0), label.dimension(1));
+	cv::Mat mat(label.dimension(0), label.dimension(1), CV_8UC1);
 	for (_TIndex i = 0; i < mat.rows; ++i)
 		for (_TIndex j = 0; j < mat.cols; ++j)
-			mat(i, j) = label(i, j, index) * 255;
+		{
+			assert(0 <= label(i, j, index) <= 1);
+			mat.at<uchar>(i, j) = label(i, j, index) * 255;
+		}
 	cv::resize(mat, mat, cv::Size(image.cols, image.rows));
 	applyColorMap(mat, mat, cv::COLORMAP_JET);
 	_TMat canvas;

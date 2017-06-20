@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <tensorflow/core/framework/op.h>
 #include "shape.h"
 
-tensorflow::Status set_shape(tensorflow::shape_inference::InferenceContext *c, const int index, const int index_size, const tensorflow::shape_inference::DimensionHandle &channels)
+tensorflow::Status set_shape(tensorflow::shape_inference::InferenceContext *c, const int index, const int index_size, std::initializer_list<tensorflow::shape_inference::DimensionOrConstant> channels)
 {
 	tensorflow::shape_inference::ShapeHandle size;
 	TF_RETURN_IF_ERROR(c->WithRank(c->input(index_size), 1, &size));
@@ -47,6 +47,9 @@ tensorflow::Status set_shape(tensorflow::shape_inference::InferenceContext *c, c
 		height = c->MakeDim(vec(0));
 		width = c->MakeDim(vec(1));
 	}
-	c->set_output(index, c->MakeShape({height, width, channels}));
+	std::vector<tensorflow::shape_inference::DimensionHandle> dims = {height, width};
+	for (auto i = channels.begin(); i != channels.end(); ++i)
+		dims.push_back(c->MakeDim(*i));
+	c->set_output(index, c->MakeShape(dims));
 	return tensorflow::Status::OK();
 }

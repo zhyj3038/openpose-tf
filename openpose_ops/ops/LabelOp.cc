@@ -35,9 +35,8 @@ REGISTER_OP("Label")
 		TF_RETURN_IF_ERROR(c->WithRank(c->input(2), 3, &keypoints));
 		tensorflow::shape_inference::ShapeHandle limbs_index;
 		TF_RETURN_IF_ERROR(c->WithRank(c->input(3), 2, &limbs_index));
-
-		set_shape(c, 0, 1, c->MakeDim(c->Value(c->Dim(limbs_index, 0)) * 2));
-		set_shape(c, 1, 1, c->MakeDim(c->Value(c->Dim(keypoints, 1)) + 1));
+		set_shape(c, 0, 1, {c->Value(c->Dim(limbs_index, 0)) * 2});
+		set_shape(c, 1, 1, {c->Value(c->Dim(keypoints, 1)) + 1});
 		return tensorflow::Status::OK();
 	})
 ;

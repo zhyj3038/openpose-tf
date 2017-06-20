@@ -116,7 +116,8 @@ def main():
         )
         image, mask, limbs, parts = batch
         with tf.name_scope('output'):
-            image, mask, limbs, parts = tf.identity(image, 'image'), tf.squeeze(mask, name='mask'), tf.identity(limbs, 'limbs'), tf.identity(parts, 'parts')
+            image, mask, limbs, parts = tf.identity(image, 'image'), tf.identity(mask, 'mask'), tf.identity(limbs, 'limbs'), tf.identity(parts, 'parts')
+            mask = tf.squeeze(mask, name='mask_squeezed')
     global_step = tf.contrib.framework.get_or_create_global_step()
     net = utils.parse_attr(config.get('config', 'backbone'))(config, image, train=True)
     assert tuple(net.get_shape().as_list()[1:3]) == size_label

@@ -19,4 +19,4 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <tensorflow/core/framework/shape_inference.h>
 
-tensorflow::Status set_shape(tensorflow::shape_inference::InferenceContext *c, const int index, const int index_size, const tensorflow::shape_inference::DimensionHandle &channels);
+tensorflow::Status set_shape(tensorflow::shape_inference::InferenceContext *c, const int index, const int index_size, std::initializer_list<tensorflow::shape_inference::DimensionOrConstant> channels);

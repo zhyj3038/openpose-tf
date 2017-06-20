@@ -18,11 +18,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import inspect
 import numpy as np
 import tensorflow as tf
+import cv2
 
 
 def per_image_standardization(image):
     stddev = np.std(image)
     return (image - np.mean(image)) / max(stddev, 1.0 / np.sqrt(np.multiply.reduce(image.shape)))
+
+
+def resize(image, size):
+    height, width, _ = image.shape
+    _width, _height = size
+    if height / width > _height / _width:
+        scale = _height / height
+    else:
+        scale = _width / width
+    m = np.eye(2, 3)
+    m[0, 0] = scale
+    m[1, 1] = scale
+    return cv2.warpAffine(image, m, size, flags=cv2.INTER_CUBIC)
 
 
 def flip_horizontally(image, mask, keypoints, width):
