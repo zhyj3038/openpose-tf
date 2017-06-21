@@ -15,9 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import inspect
 import numpy as np
-import tensorflow as tf
 import cv2
 
 
@@ -37,34 +35,3 @@ def resize(image, size):
     m[0, 0] = scale
     m[1, 1] = scale
     return cv2.warpAffine(image, m, size, flags=cv2.INTER_CUBIC)
-
-
-def flip_horizontally(image, mask, keypoints, width):
-    section = inspect.stack()[0][3]
-    with tf.name_scope(section):
-        image = tf.image.flip_left_right(image)
-        mask = tf.image.flip_left_right(mask)
-        x = keypoints[:, :, 0:1]
-        remaining = keypoints[:, :, 1:]
-        keypoints = tf.concat([width - x, remaining], 2)
-    return image, mask, keypoints
-
-
-def random_flip_horizontally(image, mask, keypoints, width, probability=0.5):
-    section = inspect.stack()[0][3]
-    with tf.name_scope(section):
-        pred = tf.random_uniform([]) < probability
-        fn1 = lambda: flip_horizontally(image, mask, keypoints, width)
-        fn2 = lambda: (image, mask, keypoints)
-        return tf.cond(pred, fn1, fn2)
-
-
-def random_grayscale(image, probability=0.5):
-    if probability <= 0:
-        return image
-    section = inspect.stack()[0][3]
-    with tf.name_scope(section):
-        pred = tf.random_uniform([]) < probability
-        fn1 = lambda: tf.tile(tf.image.rgb_to_grayscale(image), [1] * (len(image.get_shape()) - 1) + [3])
-        fn2 = lambda: image
-        return tf.cond(pred, fn1, fn2)

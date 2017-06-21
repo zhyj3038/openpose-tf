@@ -16,13 +16,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import inspect
+import configparser
 import tensorflow as tf
-from . import preprocess
+from . import augmentation
 
 __ops__ = tf.load_op_library('openpose_ops.so')
 
 
-def decode_image_labels(paths, num_parts):
+def decode_image_labels(config, paths, num_parts):
     with tf.name_scope(inspect.stack()[0][3]):
         with tf.name_scope('parse_example'):
             reader = tf.TFRecordReader()
@@ -34,7 +35,7 @@ def decode_image_labels(paths, num_parts):
             })
         with tf.name_scope('decode_image') as name:
             file = tf.read_file(example['imagepath'])
-            image = tf.image.decode_image(file, 3, name=name)
+            image = tf.image.decode_image(file, config.getint('config', 'channels'), name=name)
         with tf.name_scope('decode_mask') as name:
             file = tf.read_file(example['maskpath'])
             mask = tf.image.decode_jpeg(file, channels=1, name=name)
@@ -49,47 +50,24 @@ def data_augmentation(config, image, mask, keypoints, size_image, size_label):
     section = inspect.stack()[0][3]
     with tf.name_scope(section):
         if config.getboolean(section, 'random_flip_horizontally'):
-            image, mask, keypoints = preprocess.random_flip_horizontally(image, mask, keypoints, size_image[1])
-        if config.getboolean(section, 'random_brightness'):
-            image = tf.cond(
-                tf.random_uniform([]) < config.getfloat(section, 'enable_probability'),
-                lambda: tf.image.random_brightness(image, max_delta=63),
-                lambda: image
-            )
-        if config.getboolean(section, 'random_saturation'):
-            image = tf.cond(
-                tf.random_uniform([]) < config.getfloat(section, 'enable_probability'),
-                lambda: tf.image.random_saturation(image, lower=0.5, upper=1.5),
-                lambda: image
-            )
-        if config.getboolean(section, 'random_hue'):
-            image = tf.cond(
-                tf.random_uniform([]) < config.getfloat(section, 'enable_probability'),
-                lambda: tf.image.random_hue(image, max_delta=0.032),
-                lambda: image
-            )
-        if config.getboolean(section, 'random_contrast'):
-            image = tf.cond(
-                tf.random_uniform([]) < config.getfloat(section, 'enable_probability'),
-                lambda: tf.image.random_contrast(image, lower=0.5, upper=1.5),
-                lambda: image
-            )
-        if config.getboolean(section, 'noise'):
-            image = tf.cond(
-                tf.random_uniform([]) < config.getfloat(section, 'enable_probability'),
-                lambda: image + tf.truncated_normal(tf.shape(image)) * tf.random_uniform([], 5, 15),
-                lambda: image
-            )
-        grayscale_probability = config.getfloat(section, 'grayscale_probability')
-        if grayscale_probability > 0:
-            image = preprocess.random_grayscale(image, grayscale_probability)
+            image, mask, keypoints = augmentation.random_flip_horizontally(image, mask, keypoints, size_image[1])
+        if config.getboolean(section, 'enable'):
+            for name in config.get(section, 'sequence').split():
+                try:
+                    image = tf.cond(
+                        tf.random_uniform([]) < config.getfloat(section, 'enable_probability'),
+                        eval('augmentation._' + name)(config, image),
+                        lambda: image
+                    )
+                except configparser.NoOptionError:
+                    tf.logging.warn(name + ' disabled')
     return image, mask, keypoints
 
 
 def load_data(config, paths, size_image, size_label, num_parts, limbs_index):
     section = inspect.stack()[0][3]
     with tf.name_scope(section):
-        image, mask, keypoints = decode_image_labels(paths, num_parts)
+        image, mask, keypoints = decode_image_labels(config, paths, num_parts)
         scale = list(map(float, config.get('data_augmentation', 'scale').split()))
         rotate = config.getfloat('data_augmentation', 'rotate')
         fill = config.getint('data_augmentation', 'fill')
@@ -97,11 +75,10 @@ def load_data(config, paths, size_image, size_label, num_parts, limbs_index):
         shape = image.get_shape().as_list()
         assert shape[:-1] == list(size_image)
         if shape[-1] is None:
-            image = tf.reshape(image, shape[:2] + [3], name='fix_channels')
+            image = tf.reshape(image, shape[:2] + [config.getint('config', 'channels')], name='fix_channels')
         assert mask.get_shape().as_list()[:-1] == list(size_label)
         image = tf.cast(image, tf.float32)
-        if config.getboolean('data_augmentation', 'enable'):
-            image, mask, keypoints = data_augmentation(config, image, mask, keypoints, size_image, size_label)
+        image, mask, keypoints = data_augmentation(config, image, mask, keypoints, size_image, size_label)
         image = tf.clip_by_value(image, 0, 255)
         mask = tf.to_float(mask > 127)
     sigma_parts = config.getfloat('label', 'sigma_parts')
