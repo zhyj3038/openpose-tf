@@ -28,16 +28,13 @@ def decode_image_labels(paths, num_parts):
             reader = tf.TFRecordReader()
             _, serialized = reader.read(tf.train.string_input_producer(paths))
             example = tf.parse_single_example(serialized, features={
-                'imageshape': tf.FixedLenFeature([3], tf.int64),
                 'imagepath': tf.FixedLenFeature([], tf.string),
                 'maskpath': tf.FixedLenFeature([], tf.string),
                 'keypoints': tf.FixedLenFeature([], tf.string),
             })
-        imageshape = example['imageshape']
-        imageshape = tf.cast(imageshape, tf.int32, name='imageshape')
         with tf.name_scope('decode_image') as name:
             file = tf.read_file(example['imagepath'])
-            image = tf.image.decode_jpeg(file, channels=3, name=name)
+            image = tf.image.decode_image(file, 3, name=name)
         with tf.name_scope('decode_mask') as name:
             file = tf.read_file(example['maskpath'])
             mask = tf.image.decode_jpeg(file, channels=1, name=name)
@@ -45,7 +42,7 @@ def decode_image_labels(paths, num_parts):
             keypoints = tf.decode_raw(example['keypoints'], tf.int32)
             keypoints = tf.reshape(keypoints, [-1, num_parts, 3])
             keypoints = tf.cast(keypoints, tf.float32, name=name)
-    return imageshape, image, mask, keypoints
+    return image, mask, keypoints
 
 
 def data_augmentation(config, image, mask, keypoints, size_image, size_label):
@@ -92,12 +89,15 @@ def data_augmentation(config, image, mask, keypoints, size_image, size_label):
 def load_data(config, paths, size_image, size_label, num_parts, limbs_index):
     section = inspect.stack()[0][3]
     with tf.name_scope(section):
-        _, image, mask, keypoints = decode_image_labels(paths, num_parts)
+        image, mask, keypoints = decode_image_labels(paths, num_parts)
         scale = list(map(float, config.get('data_augmentation', 'scale').split()))
         rotate = config.getfloat('data_augmentation', 'rotate')
         fill = config.getint('data_augmentation', 'fill')
         image, mask, keypoints = __ops__.augmentation(image, mask, keypoints, size_image, size_label, scale, rotate, fill)
-        assert image.get_shape().as_list()[:-1] == list(size_image)
+        shape = image.get_shape().as_list()
+        assert shape[:-1] == list(size_image)
+        if shape[-1] is None:
+            image = tf.reshape(image, shape[:2] + [3], name='fix_channels')
         assert mask.get_shape().as_list()[:-1] == list(size_label)
         image = tf.cast(image, tf.float32)
         if config.getboolean('data_augmentation', 'enable'):

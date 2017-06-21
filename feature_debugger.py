@@ -78,6 +78,7 @@ class Debugger(QtGui.QWidget):
         layout.addWidget(toolbar)
         
         self.list_tensors = QtGui.QListWidget()
+        self.list_tensors.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
         layout.addWidget(self.list_tensors)
         
         _layout = QtGui.QHBoxLayout()

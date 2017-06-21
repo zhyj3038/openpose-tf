@@ -74,9 +74,11 @@ def cache(path, writer, mapper, args, config):
             # image
             imagepath = os.path.join(path, img['file_name'])
             width, height = img['width'], img['height']
-            imageshape = [height, width, 3]
             if args.verify:
-                if not tools.verify_image_jpeg(imagepath, imageshape):
+                if not np.all(np.equal(tools.image_size(imagepath), [width, height])):
+                    tf.logging.error('failed to verify shape of image ' + imagepath)
+                    continue
+                if not tools.verify_image_jpeg(imagepath):
                     tf.logging.error('failed to decode ' + imagepath)
                     continue
             # keypoints
@@ -100,7 +102,6 @@ def cache(path, writer, mapper, args, config):
             if args.dump:
                 np.save(os.path.join(profiledir, filename + '.npy'), keypoints)
             example = tf.train.Example(features=tf.train.Features(feature={
-                'imageshape': tf.train.Feature(int64_list=tf.train.Int64List(value=imageshape)),
                 'imagepath': tf.train.Feature(bytes_list=tf.train.BytesList(value=[tf.compat.as_bytes(imagepath)])),
                 'maskpath': tf.train.Feature(bytes_list=tf.train.BytesList(value=[tf.compat.as_bytes(maskpath)])),
                 'keypoints': tf.train.Feature(bytes_list=tf.train.BytesList(value=[keypoints.tostring()])),
