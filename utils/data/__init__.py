@@ -54,11 +54,12 @@ def data_augmentation(config, image, mask, keypoints, size_image, size_label):
         if config.getboolean(section, 'enable'):
             for name in config.get(section, 'sequence').split():
                 try:
-                    image = tf.cond(
-                        tf.random_uniform([]) < config.getfloat(section, 'enable_probability'),
-                        eval('augmentation._' + name)(config, image),
-                        lambda: image
-                    )
+                    with tf.name_scope(name):
+                        image = tf.cond(
+                            tf.random_uniform([], name='enable_probability') < config.getfloat(section, 'enable_probability'),
+                            eval('augmentation._' + name)(config, image),
+                            lambda: image
+                        )
                 except configparser.NoOptionError:
                     tf.logging.warn(name + ' disabled')
     return image, mask, keypoints
