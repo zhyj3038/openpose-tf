@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import argparse
 import configparser
+import multiprocessing
 import tensorflow as tf
 import tqdm
 import utils.data
@@ -40,11 +41,15 @@ def main():
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
     with tf.Session() as sess:
-        data = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs_index)
+        with tf.name_scope('batch'):
+            image, mask, _, limbs, parts = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs_index)
+            batch = tf.train.shuffle_batch([image, mask, limbs, parts], batch_size=args.batch_size,
+                capacity=config.getint('queue', 'capacity'), min_after_dequeue=config.getint('queue', 'min_after_dequeue'), num_threads=multiprocessing.cpu_count()
+            )
         tf.global_variables_initializer().run()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess, coord)
-        for _ in tqdm.tqdm(gen(sess, data)):
+        for _ in tqdm.tqdm(gen(sess, batch)):
             pass
         coord.request_stop()
         coord.join(threads)
@@ -54,6 +59,7 @@ def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
     parser.add_argument('-p', '--profile', nargs='+', default=['train', 'val'])
+    parser.add_argument('-b', '--batch_size', default=16, type=int, help='batch size')
     parser.add_argument('--level', default='info', help='logging level')
     return parser.parse_args()
 
