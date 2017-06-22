@@ -29,13 +29,14 @@ namespace openpose
 namespace postprocess
 {
 template <typename _T, typename _TTensor, int Options>
-std::list<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > calc_limb_score(const std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > peaks1, const std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > peaks2, Eigen::TensorMap<_TTensor, Options> limb_x, Eigen::TensorMap<_TTensor, Options> limb_y, const size_t steps, const _T min_score, const size_t min_count)
+std::list<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > calc_limb_score(const std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > peaks1, const std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > peaks2, Eigen::TensorMap<_TTensor, Options> limb_x, Eigen::TensorMap<_TTensor, Options> limb_y, const size_t steps, const _T min_score, const size_t min_count, const _T epsilon = 1e-6)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef std::tuple<_TIndex, _TIndex, _T> _TConnection;
 	typedef std::list<_TConnection> _TConnections;
 
-	assert(min_count > 0);
+	assert(min_count >= 0);
+	assert(epsilon > 0);
 	_TConnections connections;
 	for (size_t i = 0; i < peaks1.size(); ++i)
 	{
@@ -47,7 +48,7 @@ std::list<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > calc_limb_score
 			const Eigen::DenseIndex y2 = std::get<0>(_part2), x2 = std::get<1>(_part2);
 			const Eigen::DenseIndex dx = x2 - x1, dy = y2 - y1; //diff
 			const _T dist = sqrt((_T)(dx * dx + dy * dy));
-			if (dist < 1e-6)
+			if (dist < epsilon)
 				continue;
 			const _T nx = dx / dist, ny = dy / dist; //norm
 			_T score = 0;

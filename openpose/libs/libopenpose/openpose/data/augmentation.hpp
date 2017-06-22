@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include <cassert>
 #include <random>
 #include <utility>
 #include <limits>
@@ -26,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/format.hpp>
 #include <tensorflow/core/framework/tensor_types.h>
 #include <opencv2/opencv.hpp>
+#include <openpose/check.hpp>
 #include <openpose/convert.hpp>
 #include <openpose/render.hpp>
 
@@ -38,8 +38,8 @@ cv::Rect_<typename _TTensor::Scalar> calc_keypoints_rect(Eigen::TensorMap<_TTens
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef typename _TTensor::Scalar _TReal;
-	assert(keypoints.rank() == 3);
-	assert(keypoints.dimension(2) == 3);
+	check(keypoints.rank() == 3);
+	check(keypoints.dimension(2) == 3);
 	_TReal xmin = std::numeric_limits<_TReal>::max(), xmax = std::numeric_limits<_TReal>::min();
 	_TReal ymin = std::numeric_limits<_TReal>::max(), ymax = std::numeric_limits<_TReal>::min();
 	for (_TIndex i = 0; i < keypoints.dimension(1); ++i)
@@ -68,8 +68,8 @@ void rotate_points(const cv::Mat &rotate_mat, Eigen::TensorMap<_TTensor, Options
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef double _TRotate;
-	assert(keypoints.rank() == 3);
-	assert(keypoints.dimension(2) == 3);
+	check(keypoints.rank() == 3);
+	check(keypoints.dimension(2) == 3);
 	for (_TIndex i = 0; i < keypoints.dimension(0); ++i)
 		for (_TIndex j = 0; j < keypoints.dimension(1); ++j)
 			if (keypoints(i, j, 2) > 0)
@@ -116,17 +116,17 @@ cv::Rect_<_TReal> calc_bound_size(_TReal range, const cv::Size &size, const cv::
 		bound.height = std::min<_TReal>(range, size.height);
 		bound.width = bound.height * dsize.width / dsize.height;
 	}
-	assert(bound.width <= size.width && bound.height <= size.height);
+	check(bound.width <= size.width && bound.height <= size.height);
 	return bound;
 }
 
 template <typename _TRandom, typename _TReal>
 void update_bound_pos(_TRandom &random, const cv::Rect_<_TReal> &keypoints_rect, const cv::Size &size, cv::Rect_<_TReal> &bound)
 {
-	assert(bound.width <= size.width && bound.height <= size.height);
+	check(bound.width <= size.width && bound.height <= size.height);
 	const cv::Point_<_TReal> keypoints_br = keypoints_rect.br();
-	assert(keypoints_rect.x >= 0 && keypoints_rect.y >= 0);
-	assert(keypoints_br.x < size.width && keypoints_br.y < size.height);
+	check(keypoints_rect.x >= 0 && keypoints_rect.y >= 0);
+	check(keypoints_br.x < size.width && keypoints_br.y < size.height);
 	cv::Point_<_TReal> xy1(keypoints_br.x - bound.width, keypoints_br.y - bound.height);
 	if (xy1.x <= 0)
 		xy1.x = 0;
@@ -147,8 +147,8 @@ template <typename _TTensor, int Options>
 void move_scale_keypoints(const cv::Rect_<typename _TTensor::Scalar> &bound, const cv::Size &dsize, Eigen::TensorMap<_TTensor, Options> keypoints)
 {
 	typedef Eigen::DenseIndex _TIndex;
-	assert(keypoints.rank() == 3);
-	assert(keypoints.dimension(2) == 3);
+	check(keypoints.rank() == 3);
+	check(keypoints.dimension(2) == 3);
 	for (_TIndex i = 0; i < keypoints.dimension(0); ++i)
 		for (_TIndex j = 0; j < keypoints.dimension(1); ++j)
 			if (keypoints(i, j, 2) > 0)
@@ -171,7 +171,7 @@ void augmentation(_TRandom &random,
 	typedef cv::Mat_<_TVec3> _TMat3;
 	typedef cv::Mat_<_TPixel> _TMat1;
 
-	assert(scale > 1);
+	check(scale > 1);
 	keypoints_result = keypoints;
 	_TMat3 _image_result;
 	_TMat1 _mask_result;

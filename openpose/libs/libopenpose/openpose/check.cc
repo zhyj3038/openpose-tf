@@ -15,20 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "nms.hpp"
-#include "hungarian.hpp"
+#include "check.hpp"
 
-#define QUOTE(x) #x
-
-PYBIND11_PLUGIN(PROJECT_NAME) {
-	pybind11::module m(QUOTE(PROJECT_NAME));
-	//nms
-	m.def("feature_peaks", &feature_peaks<float>);
-	m.def("feature_peaks", &feature_peaks<double>);
-	m.def("featuremap_peaks", &featuremap_peaks<float>);
-	m.def("featuremap_peaks", &featuremap_peaks<double>);
-	//hungarian
-	m.def("calc_limb_score", &calc_limb_score<float>);
-	m.def("calc_limb_score", &calc_limb_score<double>);
-	return m.ptr();
+namespace openpose
+{
 }

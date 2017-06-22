@@ -15,20 +15,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "nms.hpp"
-#include "hungarian.hpp"
+#pragma once
 
-#define QUOTE(x) #x
+#include <boost/exception/all.hpp>
 
-PYBIND11_PLUGIN(PROJECT_NAME) {
-	pybind11::module m(QUOTE(PROJECT_NAME));
-	//nms
-	m.def("feature_peaks", &feature_peaks<float>);
-	m.def("feature_peaks", &feature_peaks<double>);
-	m.def("featuremap_peaks", &featuremap_peaks<float>);
-	m.def("featuremap_peaks", &featuremap_peaks<double>);
-	//hungarian
-	m.def("calc_limb_score", &calc_limb_score<float>);
-	m.def("calc_limb_score", &calc_limb_score<double>);
-	return m.ptr();
+namespace openpose
+{
+#ifdef NDEBUG
+#define check(expr) (static_cast<void>(0))
+#else
+#define check(expr) if (!(expr)) BOOST_THROW_EXCEPTION(std::runtime_error(#expr));
+#endif
 }

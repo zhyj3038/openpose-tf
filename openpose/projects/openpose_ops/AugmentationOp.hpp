@@ -19,6 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <ctime>
 #include <random>
+#include <fstream>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/exception/diagnostic_information.hpp>
 #include <tensorflow/core/framework/op_kernel.h>
 #include <openpose/data/augmentation.hpp>
 #ifdef ENABLE_NPY
@@ -80,18 +85,23 @@ void AugmentationOp<_TPixel, _TReal, _TInteger>::Compute(tensorflow::OpKernelCon
 			fill
 		);
 	}
-	catch (...)
+	catch (boost::exception &e)
 	{
-		std::cerr << "scale=" << _scale << std::endl;
-		std::cerr << "rotate=" << _rotate << std::endl;
 		cv::Mat _image;
+		const boost::uuids::uuid uuid = boost::uuids::random_generator()();
+		const std::string prefix = CMAKE_BINARY_DIR "/" + boost::uuids::to_string(uuid) + "_";
 		cv::cvtColor(openpose::tensor_mat<_TPixel, 3>(image.tensor<TPixel, 3>()), _image, cv::COLOR_BGR2RGB);
-		cv::imwrite(CMAKE_BINARY_DIR "/image.jpg", _image);
-		cv::imwrite(CMAKE_BINARY_DIR "/mask.jpg", openpose::tensor_mat<_TPixel>(mask.tensor<TPixel, 3>()));
+		cv::imwrite(prefix + "image.jpg", _image);
+		cv::imwrite(prefix + "mask.jpg", openpose::tensor_mat<_TPixel>(mask.tensor<TPixel, 3>()));
 #ifdef ENABLE_NPY
-		openpose::save_npy<tensorflow::int32>(keypoints.tensor<TReal, 3>(), CMAKE_BINARY_DIR "/keypoints.npy");
+		openpose::save_npy<tensorflow::int32>(keypoints.tensor<TReal, 3>(), prefix + "keypoints.npy");
 #endif
-		std::cerr << CMAKE_BINARY_DIR << std::endl;
+		std::ofstream fs(prefix + "err.txt");
+		fs << "scale=" << _scale << std::endl;
+		fs << "rotate=" << _rotate << std::endl;
+		fs << boost::diagnostic_information(e);
+		fs.close();
+		std::cerr << prefix << std::endl;
 		throw;
 	}
 }

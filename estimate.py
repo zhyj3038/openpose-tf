@@ -36,14 +36,14 @@ def estimate(config, limbs_index, image, limbs, parts):
     min_score = config.getfloat('hungarian', 'min_score')
     min_count = config.getint('hungarian', 'min_count')
     
+    if args.debug == 'nms':
+        utils.visualize.show_nms(image, parts, threshold, limits)
+    elif args.debug == 'score':
+        utils.visualize.show_score(image, limbs_index, limbs, parts, threshold, limits, steps, 0, 0)
     height, width, _ = image.shape
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)
-    if args.debug == 'nms':
-        utils.visualize.draw_nms(ax, height, width, parts, threshold, limits)
-    elif args.debug == 'score':
-        utils.visualize.draw_score(ax, height, width, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count)
     ax.set_xticks([])
     ax.set_yticks([])
     return fig

@@ -27,7 +27,6 @@ project(${PROJECT_NAME})
 file(GLOB_RECURSE SOURCE_LIST ${CMAKE_CURRENT_SOURCE_DIR} *.cc *.cpp)
 pybind11_add_module(${PROJECT_NAME} ${SOURCE_LIST})
 add_definitions(-DPROJECT_NAME=${PROJECT_NAME})
-add_definitions(-DPROJECT_NAME_STR=\"${PROJECT_NAME}\")
 set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYMODULE_ROOT}")
 
 include_directories(${CMAKE_SOURCE_DIR}/libs/libopenpose)

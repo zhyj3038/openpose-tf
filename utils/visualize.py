@@ -44,25 +44,74 @@ def draw_keypoints(ax, keypoints, limbs_index, colors=['r', 'w'], alpha=0.3):
                 ax.plot([x1, x2], [y1, y2], color=limb_colors[i])
 
 
-def draw_nms(ax, height, width, parts, threshold, limits, alpha=0.5):
+def draw_peaks(ax, peaks, width, height, _width, _height, text, color='w', alpha=0.5):
+    for y, x, _ in peaks:
+        x = x * width / _width
+        y = y * height / _height
+        ax.text(x, y, text, bbox=dict(facecolor='w', alpha=alpha), ha='center', va='center')
+
+
+def show_nms(image, parts, threshold, limits, alpha=0.5):
+    height, width, _ = image.shape
     _height, _width, _ = parts.shape
+    for index, feature in enumerate(np.transpose(parts, [2, 0, 1])):
+        peaks = pyopenpose.feature_peaks(feature, threshold, limits)
+        fig = plt.figure()
+        ax = fig.gca()
+        ax.imshow(image)
+        ax.imshow(scipy.misc.imresize(feature, [height, width]), alpha=alpha)
+        draw_peaks(ax, peaks, width, height, _width, _height, str(index))
+        ax.set_xticks([])
+        ax.set_yticks([])
+        fig.canvas.set_window_title('part%d' % index)
+        fig.tight_layout()
+        plt.show()
     peaks = pyopenpose.featuremap_peaks(parts, threshold, limits)
-    for i, _peaks in enumerate(peaks):
-        for y, x, _ in _peaks:
-            ax.text(x * width / _width, y * height / _height, str(i), bbox=dict(facecolor='w', alpha=alpha))
+    fig = plt.figure()
+    ax = fig.gca()
+    ax.imshow(image)
+    for index, _peaks in enumerate(peaks):
+        draw_peaks(ax, _peaks, width, height, _width, _height, str(index))
+    ax.set_xticks([])
+    ax.set_yticks([])
+    fig.tight_layout()
+    plt.show()
 
 
-def draw_score(ax, height, width, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count):
+def show_score(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, alpha=0.5, linewidth=10):
+    height, width, _ = image.shape
     _height, _width, _ = limbs.shape
     peaks = pyopenpose.featuremap_peaks(parts, threshold, limits)
     limbs = np.reshape(limbs, [_height, _width, -1, 2])
     limbs = np.transpose(limbs, [2, 3, 0, 1])
     limb_colors = [prop['color'] for _, prop in zip(limbs_index, itertools.cycle(plt.rcParams['axes.prop_cycle']))]
-    for i, ((i1, i2), (limb_x, limb_y), color) in enumerate(zip(limbs_index, limbs, limb_colors)):
+    for index, ((i1, i2), (limb_x, limb_y), color) in enumerate(zip(limbs_index, limbs, limb_colors)):
+        fig, axes = plt.subplots(1, 3)
+        for ax in axes.flat:
+            ax.imshow(image)
+        axes.flat[0].imshow(scipy.misc.imresize(limb_x, [height, width]), alpha=alpha)
+        axes.flat[1].imshow(scipy.misc.imresize(limb_y, [height, width]), alpha=alpha)
+        for i, _peaks in enumerate(peaks):
+            for a in range(2):
+                draw_peaks(axes.flat[a], _peaks, width, height, _width, _height, str(i), color='r' if i == index else 'w')
         peaks1 = peaks[i1]
         peaks2 = peaks[i2]
+        draw_peaks(axes.flat[0], peaks1, width, height, _width, _height, str(i1))
+        draw_peaks(axes.flat[1], peaks2, width, height, _width, _height, str(i2))
         connections = pyopenpose.calc_limb_score(peaks1, peaks2, limb_x, limb_y, steps, min_score, min_count)
+        max_score = max(connections, key=lambda item: item[-1])[-1] if connections else 0
         for p1, p2, score in connections:
-            y1, x1, v1 = peaks1[p1]
-            y2, x2, v2 = peaks2[p2]
-            ax.plot([x1 * width / _width, x2 * width / _width], [y1 * height / _height, y2 * height / _height], color=color)
+            y1, x1, _ = peaks1[p1]
+            y2, x2, _ = peaks2[p2]
+            x1, x2 = x1 * width / _width, x2 * width / _width
+            y1, y2 = y1 * height / _height, y2 * height / _height
+            ax.text(x1, y1, '%d_%d' % (i1, p1), bbox=dict(facecolor='w', alpha=alpha), ha='center', va='center')
+            ax.text(x2, y2, '%d_%d' % (i2, p2), bbox=dict(facecolor='r', alpha=alpha), ha='center', va='center')
+            if max_score > 0:
+                ax.plot([x1, x2], [y1, y2], color=color, linewidth=linewidth * score / max_score)
+        for ax in axes.flat:
+            ax.set_xticks([])
+            ax.set_yticks([])
+        fig.canvas.set_window_title('limb%d (%d-%d)' % (index, i1, i2))
+        fig.tight_layout()
+        plt.show()
