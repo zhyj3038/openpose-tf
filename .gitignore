@@ -1,4 +1,4 @@
-openpose_ops/third_party/*/
+*/third_party/*/
 *.pyc
 __pycache__
 .project
