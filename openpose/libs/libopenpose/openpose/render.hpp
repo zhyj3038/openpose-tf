@@ -26,8 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace openpose
 {
-namespace data
-{
 template <typename _TPixel, int cn, typename _TTensor, int Options>
 void draw_keypoints(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index)
 {
@@ -94,6 +92,5 @@ cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &im
 	_TMat canvas;
 	cv::addWeighted(image, 0.5, mat, 0.5, 0.0, canvas);
 	return canvas;
-}
 }
 }

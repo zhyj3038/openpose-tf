@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <tensorflow/core/framework/op_kernel.h>
 #include <openpose/data/augmentation.hpp>
 #ifdef ENABLE_NPY
-#include <openpose/data/npy.hpp>
+#include <openpose/npy.hpp>
 #endif
 
 template <typename _TPixel, typename _TReal, typename _TInteger>
@@ -85,11 +85,11 @@ void AugmentationOp<_TPixel, _TReal, _TInteger>::Compute(tensorflow::OpKernelCon
 		std::cerr << "scale=" << _scale << std::endl;
 		std::cerr << "rotate=" << _rotate << std::endl;
 		cv::Mat _image;
-		cv::cvtColor(openpose::data::tensor_mat<_TPixel, 3>(image.tensor<TPixel, 3>()), _image, cv::COLOR_BGR2RGB);
+		cv::cvtColor(openpose::tensor_mat<_TPixel, 3>(image.tensor<TPixel, 3>()), _image, cv::COLOR_BGR2RGB);
 		cv::imwrite(CMAKE_BINARY_DIR "/image.jpg", _image);
-		cv::imwrite(CMAKE_BINARY_DIR "/mask.jpg", openpose::data::tensor_mat<_TPixel>(mask.tensor<TPixel, 3>()));
+		cv::imwrite(CMAKE_BINARY_DIR "/mask.jpg", openpose::tensor_mat<_TPixel>(mask.tensor<TPixel, 3>()));
 #ifdef ENABLE_NPY
-		openpose::data::save_npy<tensorflow::int32>(keypoints.tensor<TReal, 3>(), CMAKE_BINARY_DIR "/keypoints.npy");
+		openpose::save_npy<tensorflow::int32>(keypoints.tensor<TReal, 3>(), CMAKE_BINARY_DIR "/keypoints.npy");
 #endif
 		std::cerr << CMAKE_BINARY_DIR << std::endl;
 		throw;

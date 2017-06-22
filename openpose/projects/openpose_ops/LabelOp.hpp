@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <tensorflow/core/framework/op_kernel.h>
 #include <openpose/data/label.hpp>
 #ifdef ENABLE_NPY
-#include <openpose/data/npy.hpp>
+#include <openpose/npy.hpp>
 #endif
 
 template <typename _TReal, typename _TInteger>
@@ -65,7 +65,7 @@ void LabelOp<_TReal, _TInteger>::Compute(tensorflow::OpKernelContext *context)
 	catch (...)
 	{
 #ifdef ENABLE_NPY
-		openpose::data::save_npy<tensorflow::int32>(keypoints.tensor<TReal, 3>(), CMAKE_BINARY_DIR "/keypoints.npy");
+		openpose::save_npy<tensorflow::int32>(keypoints.tensor<TReal, 3>(), CMAKE_BINARY_DIR "/keypoints.npy");
 #endif
 		std::cerr << CMAKE_BINARY_DIR << std::endl;
 		throw;

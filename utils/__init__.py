@@ -57,15 +57,16 @@ def get_mappers(config):
 
 def get_cachedir(config):
     basedir = os.path.expanduser(os.path.expandvars(config.get('cache', 'basedir')))
-    name = os.path.basename(config.get('cache', 'dataset'))
-    return os.path.join(basedir, 'cache', name)
+    dataset = os.path.basename(config.get('cache', 'dataset'))
+    return os.path.join(basedir, 'cache', dataset)
 
 
 def get_logdir(config):
     basedir = os.path.expanduser(os.path.expandvars(config.get('cache', 'basedir')))
+    dataset = os.path.basename(config.get('cache', 'dataset'))
     backbone = os.path.splitext(config.get('config', 'backbone'))[-1][1:]
     stages = os.path.splitext(config.get('config', 'stages'))[-1][1:]
-    return os.path.join(basedir, backbone, stages)
+    return os.path.join(basedir, dataset, backbone, stages)
 
 
 def get_limbs_index(config):

@@ -145,9 +145,7 @@ def main():
     with tf.Session() as sess:
         image = tf.placeholder(tf.float32, [1, size_image[0], size_image[1], 3], name='image')
         net = utils.parse_attr(config.get('config', 'backbone'))(config, image, train=True)
-        limbs, parts = utils.parse_attr(config.get('config', 'stages'))(config, net, len(limbs_index), num_parts)
-        limbs = tf.check_numerics(limbs, limbs.op.name)
-        parts = tf.check_numerics(parts[:, :, :, :-1], parts.op.name) # drop background channel
+        utils.parse_attr(config.get('config', 'stages'))(config, net, len(limbs_index), num_parts)
         model_path = tf.train.latest_checkpoint(logdir)
         tf.logging.info('load ' + model_path)
         slim.assign_from_checkpoint_fn(model_path, tf.global_variables())(sess)

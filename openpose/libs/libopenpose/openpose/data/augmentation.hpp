@@ -26,8 +26,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/format.hpp>
 #include <tensorflow/core/framework/tensor_types.h>
 #include <opencv2/opencv.hpp>
-#include "convert.hpp"
-#include "render.hpp"
+#include <openpose/convert.hpp>
+#include <openpose/render.hpp>
 
 namespace openpose
 {

@@ -20,8 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace openpose
 {
-namespace data
-{
 template <typename _TData, typename _TTensor, int Options>
 void save_npy(Eigen::TensorMap<_TTensor, Options> tensor, const std::string &path)
 {
@@ -46,6 +44,5 @@ _TTensor load_npy3(const std::string &path)
 	arr.destruct();
 	assert(tensor.rank() == arr.shape.size());
 	return tensor;
-}
 }
 }

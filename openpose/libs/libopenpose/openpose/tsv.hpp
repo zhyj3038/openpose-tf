@@ -23,8 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace openpose
 {
-namespace data
-{
 template <typename _TTensor>
 _TTensor load_tsv(const std::string &path, const char delimiter = '\t')
 {
@@ -58,7 +56,6 @@ _TTensor load_tsv(const std::string &path, const char delimiter = '\t')
 		++index;
 	}
 	return tensor;
-}
 }
 }
 

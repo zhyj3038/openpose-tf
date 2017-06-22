@@ -28,8 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <openpose/data/augmentation.hpp>
-#include <openpose/data/npy.hpp>
-#include <openpose/data/render.hpp>
+#include <openpose/npy.hpp>
+#include <openpose/render.hpp>
 
 template <typename _TPixel, typename _TReal, typename _TRandom>
 void test(_TRandom &random, const std::string &path_image, const std::string &path_mask, const std::string &path_keypoints, const size_t height, const size_t width, const std::pair<size_t, size_t> downsample, const _TReal scale, const _TReal rotate, const _TPixel fill, Eigen::DenseIndex index = -1)
@@ -41,10 +41,10 @@ void test(_TRandom &random, const std::string &path_image, const std::string &pa
 	typedef cv::Mat_<_TPixel> _TMat1;
 
 	const _TMat3 image = cv::imread(path_image, CV_LOAD_IMAGE_COLOR);
-	const _TTensorPixel _image = openpose::data::mat_tensor<_TTensorPixel>(image);
+	const _TTensorPixel _image = openpose::mat_tensor<_TTensorPixel>(image);
 	const _TMat1 mask = cv::imread(path_mask, cv::IMREAD_GRAYSCALE);
-	const _TTensorPixel _mask = openpose::data::mat_tensor<_TTensorPixel>(mask);
-	const _TTensorReal _keypoints = openpose::data::load_npy3<tensorflow::int32, _TTensorReal>(path_keypoints);
+	const _TTensorPixel _mask = openpose::mat_tensor<_TTensorPixel>(mask);
+	const _TTensorReal _keypoints = openpose::load_npy3<tensorflow::int32, _TTensorReal>(path_keypoints);
 	_TTensorPixel _image_result(height, width, _image.dimension(2));
 	_TTensorPixel _mask_result(height / downsample.first, width / downsample.second, _mask.dimension(2));
 	_TTensorReal _keypoints_result(_keypoints.dimensions());
@@ -74,14 +74,14 @@ void test(_TRandom &random, const std::string &path_image, const std::string &pa
 			fill
 		);
 	{
-		const cv::Mat canvas = openpose::data::render(image, mask,
+		const cv::Mat canvas = openpose::render(image, mask,
 			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints.data(), _keypoints.dimensions()));
 		cv::imshow("original", canvas);
 	}
 	{
-		const cv::Mat canvas = openpose::data::render(
-			openpose::data::tensor_mat<_TPixel, 3>(typename tensorflow::TTypes<_TPixel, 3>::ConstTensor(_image_result.data(), _image_result.dimensions())),
-			openpose::data::tensor_mat<_TPixel>(typename tensorflow::TTypes<_TPixel, 3>::ConstTensor(_mask_result.data(), _mask_result.dimensions())),
+		const cv::Mat canvas = openpose::render(
+			openpose::tensor_mat<_TPixel, 3>(typename tensorflow::TTypes<_TPixel, 3>::ConstTensor(_image_result.data(), _image_result.dimensions())),
+			openpose::tensor_mat<_TPixel>(typename tensorflow::TTypes<_TPixel, 3>::ConstTensor(_mask_result.data(), _mask_result.dimensions())),
 			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints_result.data(), _keypoints_result.dimensions()),
 			index);
 		cv::imshow("result", canvas);

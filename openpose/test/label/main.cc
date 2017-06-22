@@ -26,9 +26,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <openpose/data/label.hpp>
-#include <openpose/data/npy.hpp>
-#include <openpose/data/tsv.hpp>
-#include <openpose/data/render.hpp>
+#include <openpose/npy.hpp>
+#include <openpose/tsv.hpp>
+#include <openpose/render.hpp>
 
 std::string get_title_limbs(const Eigen::DenseIndex index, const Eigen::DenseIndex total)
 {
@@ -57,8 +57,8 @@ void test(const std::string &path_image, const std::string &path_keypoints, cons
 	typedef cv::Mat_<_TVec3> _TMat3;
 
 	const _TMat3 image = cv::imread(path_image, CV_LOAD_IMAGE_COLOR);
-	const _TTensorReal keypoints = openpose::data::load_npy3<tensorflow::int32, _TTensorReal>(path_keypoints);
-	const _TTensorInteger limbs_index = openpose::data::load_tsv<_TTensorInteger>(path_limbs_index);
+	const _TTensorReal keypoints = openpose::load_npy3<tensorflow::int32, _TTensorReal>(path_keypoints);
+	const _TTensorInteger limbs_index = openpose::load_tsv<_TTensorInteger>(path_limbs_index);
 	_TTensorReal _limbs(image.rows / downsample.first, image.cols / downsample.second, limbs_index.dimension(0) * 2);
 	_TTensorReal _parts(image.rows / downsample.first, image.cols / downsample.second, keypoints.dimension(1) + 1);
 	typename tensorflow::TTypes<_TReal, 3>::ConstTensor _keypoints(keypoints.data(), keypoints.dimensions());
@@ -72,14 +72,14 @@ void test(const std::string &path_image, const std::string &path_keypoints, cons
 	);
 	for (_TIndex index = 0; index < _limbs.dimension(2); ++index)
 	{
-		const cv::Mat canvas = openpose::data::render(image, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_limbs.data(), _limbs.dimensions()), index);
+		const cv::Mat canvas = openpose::render(image, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_limbs.data(), _limbs.dimensions()), index);
 		cv::imshow(get_title_limbs(index, limbs_index.dimension(0)), canvas);
 		cv::waitKey(0);
 		cv::destroyAllWindows();
 	}
 	for (_TIndex index = 0; index < _parts.dimension(2); ++index)
 	{
-		const cv::Mat canvas = openpose::data::render(image, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_parts.data(), _parts.dimensions()), index);
+		const cv::Mat canvas = openpose::render(image, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_parts.data(), _parts.dimensions()), index);
 		cv::imshow(get_title_parts(index, keypoints.dimension(1)), canvas);
 		cv::waitKey(0);
 		cv::destroyAllWindows();

@@ -18,12 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 #include <cassert>
+#include <type_traits>
 #include <tensorflow/core/framework/tensor_types.h>
 #include <opencv2/opencv.hpp>
 
 namespace openpose
-{
-namespace data
 {
 template <typename _T, int cn, typename _TTensor, int Options>
 cv::Mat_<cv::Vec<_T, cn> > tensor_mat(Eigen::TensorMap<_TTensor, Options> tensor)
@@ -99,6 +98,5 @@ void copy_tensor(Eigen::TensorMap<_TConstTensor, Options> src, Eigen::TensorMap<
 		for (_TIndex j = 0; j < dst.dimension(1); ++j)
 			for (_TIndex k = 0; k < dst.dimension(2); ++k)
 				dst(i, j, k) = src(i, j, k);
-}
 }
 }

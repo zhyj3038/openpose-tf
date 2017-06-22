@@ -16,12 +16,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import numpy as np
+from PIL import Image, ExifTags
 import cv2
 
 
 def per_image_standardization(image):
     stddev = np.std(image)
     return (image - np.mean(image)) / max(stddev, 1.0 / np.sqrt(np.multiply.reduce(image.shape)))
+
+
+def read_image(path):
+    image = Image.open(path)
+    for key in ExifTags.TAGS.keys():
+        if ExifTags.TAGS[key] == 'Orientation':
+            break
+    try:
+        exif = dict(image._getexif().items())
+    except AttributeError:
+        return image
+    if exif[key] == 3:
+        image = image.rotate(180, expand=True)
+    elif exif[key] == 6:
+        image = image.rotate(270, expand=True)
+    elif exif[key] == 8:
+        image = image.rotate(90, expand=True)
+    return image
 
 
 def resize(image, size):

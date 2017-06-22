@@ -63,5 +63,22 @@ std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > limit_peaks(c
 	_peaks.resize(_limits);
 	return _peaks;
 }
+
+template <typename _TTensor, int Options>
+std::vector<std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, typename std::remove_const<typename _TTensor::Scalar>::type> > > featuremap_peaks(Eigen::TensorMap<_TTensor, Options> featuremap, const typename _TTensor::Scalar threshold, const size_t limits)
+{
+	typedef Eigen::DenseIndex _TIndex;
+	typedef typename std::remove_const<typename _TTensor::Scalar>::type _T;
+	typedef std::tuple<_TIndex, _TIndex, _T> _TPeak;
+	typedef std::vector<_TPeak> _TPeaks;
+	std::vector<_TPeaks> result(featuremap.dimension(2));
+	for (size_t i = 0; i < result.size(); ++i)
+	{
+		const Eigen::Tensor<_T, 2, Eigen::RowMajor, _TIndex> feature = featuremap.chip(i, 2);
+		const auto peaks = feature_peaks(typename tensorflow::TTypes<_T, 2>::ConstTensor(feature.data(), feature.dimensions()), threshold);
+		result[i] = limit_peaks(peaks, limits);
+	}
+	return result;
+}
 }
 }
