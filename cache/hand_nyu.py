@@ -19,6 +19,7 @@ import os
 import tqdm
 import numpy as np
 import scipy.io
+import scipy.misc
 import tensorflow as tf
 from . import tools
 
@@ -51,14 +52,14 @@ def cache(path, writer, mapper, args, config):
             if not tools.verify_image_png(imagepath):
                 tf.logging.error('failed to decode ' + imagepath)
                 continue
+        width, height = tools.image_size(imagepath)
         # keypoints
-        keypoints = np.squeeze(joint_uvd[image_index, kinect_index, :, :])
+        keypoints = joint_uvd[image_index, kinect_index, :, :]
         keypoints[:, 2] = 1
         keypoints = np.array(keypoints, dtype=np.int32)
         # mask
         filename = os.path.splitext(os.path.basename(imagepath))[0]
         maskpath = os.path.join(profiledir, filename + '.mask' + mask_ext)
-        width, height = tools.image_size(imagepath)
         mask = np.ones(shape=(height, width), dtype=np.uint8) * 255
         scipy.misc.imsave(os.path.join(cachedir, maskpath), mask)
         if args.dump:

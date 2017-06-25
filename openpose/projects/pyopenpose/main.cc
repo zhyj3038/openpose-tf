@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "nms.hpp"
 #include "hungarian.hpp"
+#include "estimate.hpp"
 
 #define QUOTE(x) #x
 
@@ -30,5 +31,14 @@ PYBIND11_PLUGIN(PROJECT_NAME) {
 	//hungarian
 	m.def("calc_limb_score", &calc_limb_score<float>);
 	m.def("calc_limb_score", &calc_limb_score<double>);
+	m.def("filter_connections", &openpose::postprocess::filter_connections<float>);
+	m.def("filter_connections", &openpose::postprocess::filter_connections<double>);
+	m.def("clustering", &clustering<float>);
+	m.def("clustering", &clustering<double>);
+	m.def("filter_cluster", &openpose::postprocess::filter_cluster<float>);
+	m.def("filter_cluster", &openpose::postprocess::filter_cluster<double>);
+	//estimate
+	m.def("estimate", &estimate<float>);
+	m.def("estimate", &estimate<double>);
 	return m.ptr();
 }

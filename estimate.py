@@ -19,31 +19,47 @@ import os
 import argparse
 import configparser
 import operator
-import itertools
 import numpy as np
+import scipy.misc
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+import matplotlib
 import matplotlib.pyplot as plt
 import utils.preprocess
 import utils.visualize
 import pyopenpose
 
 
-def estimate(config, limbs_index, image, limbs, parts):
+def estimate(config, image, limbs_index, limbs, parts):
+    if args.dump:
+        dump = os.path.expanduser(os.path.expandvars(args.dump))
+        tf.logging.warn('dump feature map into ' + dump)
+        os.makedirs(dump, exist_ok=True)
+        scipy.misc.imsave(os.path.join(dump, 'image.jpg'), image)
+        np.save(os.path.join(dump, 'limbs.npy'), limbs)
+        np.save(os.path.join(dump, 'parts.npy'), parts)
     threshold = config.getfloat('nms', 'threshold')
     limits = config.getint('nms', 'limits')
-    steps = config.getint('hungarian', 'steps')
-    min_score = config.getfloat('hungarian', 'min_score')
-    min_count = config.getint('hungarian', 'min_count')
-    
-    if args.debug == 'nms':
+    steps = config.getint('integration', 'steps')
+    min_score = config.getfloat('integration', 'min_score')
+    min_count = config.getint('integration', 'min_count')
+    cluster_min_score = config.getfloat('cluster', 'min_score')
+    cluster_min_count = config.getint('cluster', 'min_count')
+    if args.show == 'nms':
         utils.visualize.show_nms(image, parts, threshold, limits)
-    elif args.debug == 'score':
-        utils.visualize.show_score(image, limbs_index, limbs, parts, threshold, limits, steps, 0, 0)
-    height, width, _ = image.shape
+    elif args.show == 'score':
+        utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, 0, 1)
+    elif args.show == 'connection':
+        utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count)
+    elif args.show == 'clusters':
+        utils.visualize.show_clusters(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count)
+    results = pyopenpose.estimate(limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, cluster_min_score, cluster_min_count)
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)
+    height, width, _ = image.shape
+    _height, _width, _ = parts.shape
+    utils.visualize.draw_results(ax, height / _height, width / _width, results)
     ax.set_xticks([])
     ax.set_yticks([])
     return fig
@@ -52,7 +68,7 @@ def estimate(config, limbs_index, image, limbs, parts):
 def read_image(path, size):
     image = utils.preprocess.read_image(path)
     image = np.array(np.uint8(image))
-    return utils.preprocess.resize(image, size)
+    return image, utils.preprocess.resize(image, size)
 
 
 def eval_tensor(sess, image, _image, tensors):
@@ -64,6 +80,7 @@ def eval_tensor(sess, image, _image, tensors):
 
 
 def main():
+    matplotlib.rcParams.update({'font.size': args.fontsize})
     cachedir = utils.get_cachedir(config)
     logdir = utils.get_logdir(config)
     with open(cachedir + '.parts', 'r') as f:
@@ -81,9 +98,9 @@ def main():
         slim.assign_from_checkpoint_fn(model_path, tf.global_variables())(sess)
         path = os.path.expanduser(os.path.expandvars(args.path))
         if os.path.isfile(path):
-            _image = read_image(path, size_image[::-1])
-            _limbs, _parts = eval_tensor(sess, image, _image, [limbs, parts])
-            estimate(config, limbs_index, _image, _limbs, _parts)
+            image_rgb, image_resized = read_image(path, size_image[::-1])
+            _limbs, _parts = eval_tensor(sess, image, image_resized, [limbs, parts])
+            estimate(config, image_resized, limbs_index, _limbs, _parts)
             plt.show()
         else:
             for dirpath, _, filenames in os.walk(path):
@@ -91,9 +108,9 @@ def main():
                     if os.path.splitext(filename)[-1].lower() in args.exts:
                         _path = os.path.join(dirpath, filename)
                         print(_path)
-                        _image = read_image(_path, size_image[::-1])
-                        _limbs, _parts = eval_tensor(sess, image, _image, [limbs, parts])
-                        estimate(config, limbs_index, _image, _limbs, _parts)
+                        image_rgb, image_resized = read_image(_path, size_image[::-1])
+                        _limbs, _parts = eval_tensor(sess, image, image_resized, [limbs, parts])
+                        estimate(config, image_resized, limbs_index, _limbs, _parts)
                         plt.show()
 
 
@@ -101,8 +118,10 @@ def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('path', help='input image path')
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
-    parser.add_argument('-d', '--debug')
+    parser.add_argument('-d', '--dump', help='folder path of feature map dump file')
+    parser.add_argument('-s', '--show')
     parser.add_argument('--level', default='info', help='logging level')
+    parser.add_argument('--fontsize', default=7, type=int)
     return parser.parse_args()
 
 if __name__ == '__main__':

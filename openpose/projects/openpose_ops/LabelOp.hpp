@@ -18,6 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 #include <ctime>
+#include <fstream>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/exception/diagnostic_information.hpp>
 #include <tensorflow/core/framework/op_kernel.h>
 #include <openpose/data/label.hpp>
 #ifdef ENABLE_NPY
@@ -62,12 +67,21 @@ void LabelOp<_TReal, _TInteger>::Compute(tensorflow::OpKernelContext *context)
 		openpose::data::make_limbs(_keypoints, limbs_index.tensor<TInteger, 2>(), sigma_limbs, size_image(0), size_image(1), _limbs->tensor<TReal, 3>());
 		openpose::data::make_parts(_keypoints, sigma_parts, size_image(0), size_image(1), _parts->tensor<TReal, 3>());
 	}
-	catch (...)
+	catch (boost::exception &e)
 	{
-#ifdef ENABLE_NPY
-		openpose::save_npy<tensorflow::int32>(keypoints.tensor<TReal, 3>(), CMAKE_BINARY_DIR "/keypoints.npy");
+		const boost::uuids::uuid uuid = boost::uuids::random_generator()();
+#ifdef NDEBUG
+		const std::string prefix = boost::uuids::to_string(uuid);
+#else
+		const std::string prefix = CMAKE_BINARY_DIR "/" + boost::uuids::to_string(uuid);
 #endif
-		std::cerr << CMAKE_BINARY_DIR << std::endl;
+#ifdef ENABLE_NPY
+		openpose::save_npy<tensorflow::int32>(keypoints.tensor<TReal, 3>(), prefix + ".npy");
+#endif
+		std::ofstream fs(prefix + ".txt");
+		fs << boost::diagnostic_information(e);
+		fs.close();
+		std::cerr << prefix << std::endl;
 		throw;
 	}
 }

@@ -26,11 +26,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "convert.hpp"
 
 template <typename _T>
-std::list<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > calc_limb_score(const std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > part1, const std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > part2, pybind11::array_t<_T> limb_x, pybind11::array_t<_T> limb_y, const size_t steps, const _T min_score, const size_t min_count)
+std::list<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > calc_limb_score(const Eigen::DenseIndex channel, pybind11::array_t<_T> limbs, const std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > &peaks1, const std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > &peaks2, const size_t steps, const _T min_score, const size_t min_count)
 {
 	typedef Eigen::DenseIndex _TIndex;
-	typedef Eigen::Tensor<_T, 2, Eigen::RowMajor, _TIndex> _TTensor;
-	const auto _limb_x = numpy_tensor<_TTensor>(limb_x);
-	const auto _limb_y = numpy_tensor<_TTensor>(limb_y);
-	return openpose::postprocess::calc_limb_score(part1, part2, typename tensorflow::TTypes<_T, 2>::ConstTensor(_limb_x.data(), _limb_x.dimensions()), typename tensorflow::TTypes<_T, 2>::ConstTensor(_limb_y.data(), _limb_y.dimensions()), steps, min_score, min_count);
+	typedef Eigen::Tensor<_T, 3, Eigen::RowMajor, _TIndex> _TTensor;
+	const auto _limbs = numpy_tensor<_TTensor>(limbs);
+	return openpose::postprocess::calc_limb_score(channel, typename tensorflow::TTypes<_T, 3>::ConstTensor(_limbs.data(), _limbs.dimensions()), peaks1, peaks2, steps, min_score, min_count);
+}
+
+template <typename _T>
+std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > clustering(const std::vector<std::pair<Eigen::DenseIndex, Eigen::DenseIndex> > &limbs_index, pybind11::array_t<_T> limbs, const std::vector<std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > > &peaks, const size_t steps, const _T min_score, const size_t min_count)
+{
+	typedef Eigen::DenseIndex _TIndex;
+	typedef Eigen::Tensor<_T, 3, Eigen::RowMajor, _TIndex> _TTensor;
+	const auto _limbs = numpy_tensor<_TTensor>(limbs);
+	return openpose::postprocess::clustering(limbs_index, typename tensorflow::TTypes<_T, 3>::ConstTensor(_limbs.data(), _limbs.dimensions()), peaks, steps, min_score, min_count);
 }

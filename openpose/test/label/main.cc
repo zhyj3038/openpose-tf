@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <boost/format.hpp>
 #include <Eigen/Core>
+#include <tensorflow/core/framework/tensor_types.h>
 #include <tensorflow/core/platform/default/integral_types.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
@@ -58,7 +59,7 @@ void test(const std::string &path_image, const std::string &path_keypoints, cons
 
 	const _TMat3 image = cv::imread(path_image, CV_LOAD_IMAGE_COLOR);
 	const _TTensorReal keypoints = openpose::load_npy3<tensorflow::int32, _TTensorReal>(path_keypoints);
-	const _TTensorInteger limbs_index = openpose::load_tsv<_TTensorInteger>(path_limbs_index);
+	const _TTensorInteger limbs_index = openpose::load_tsv_tensor<_TTensorInteger>(path_limbs_index);
 	_TTensorReal _limbs(image.rows / downsample.first, image.cols / downsample.second, limbs_index.dimension(0) * 2);
 	_TTensorReal _parts(image.rows / downsample.first, image.cols / downsample.second, keypoints.dimension(1) + 1);
 	typename tensorflow::TTypes<_TReal, 3>::ConstTensor _keypoints(keypoints.data(), keypoints.dimensions());
@@ -89,15 +90,15 @@ void test(const std::string &path_image, const std::string &path_keypoints, cons
 int main(void)
 {
 #define IMAGE_EXT ".jpg"
-	typedef tensorflow::uint8 _TPixel;
+	typedef uchar _TPixel;
 	typedef tensorflow::int32 _TInteger;
 	typedef float _TReal;
 	const _TReal sigma_parts = 7;
 	const _TReal sigma_limbs = 7;
 	const std::pair<size_t, size_t> downsample = std::make_pair(8, 8);
 	{
-		const std::string prefix = std::string(DUMP_DIR) + "/COCO_train2014_000000000077";
-		test<_TPixel, _TInteger>(prefix + IMAGE_EXT, prefix + ".npy", DUMP_DIR ".tsv", downsample, sigma_parts, sigma_limbs);
+		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_train2014_000000000077";
+		test<_TPixel, _TInteger>(prefix + IMAGE_EXT, prefix + ".npy", DUMP_DIR "/limbs_index.tsv", downsample, sigma_parts, sigma_limbs);
 	}
 	return 0;
 }

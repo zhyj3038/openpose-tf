@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import inspect
 from PIL import Image
+import numpy as np
 import tensorflow as tf
 
 
@@ -59,3 +60,8 @@ def verify_image_png(imagepath):
     except:
         return False
     return len(image.shape) == 3
+
+
+def filter_keypoints(keypoints, width, height):
+    x, y = keypoints[:, :, 0], keypoints[:, :, 1]
+    keypoints[np.logical_and(np.logical_and(0 <= x, x < width - 1), np.logical_and(0 <= y, y < height - 1))][:, :, 2] = 0

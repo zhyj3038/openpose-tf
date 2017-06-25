@@ -15,15 +15,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
-#include <boost/exception/all.hpp>
+#include "hungarian.hpp"
 
 namespace openpose
 {
-#ifdef NDEBUG
-#define check(expr) (static_cast<void>(0))
-#else
-#define check(expr) if (!(expr)) BOOST_THROW_EXCEPTION(std::runtime_error(#expr));
-#endif
+namespace postprocess
+{
+size_t points_count(const std::vector<Eigen::DenseIndex> &points)
+{
+	size_t count = 0;
+	for (size_t i = 0; i < points.size(); ++i)
+		if (points[i] >= 0)
+			++count;
+	return count;
+}
+}
 }

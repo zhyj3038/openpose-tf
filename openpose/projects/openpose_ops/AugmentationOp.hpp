@@ -89,14 +89,18 @@ void AugmentationOp<_TPixel, _TReal, _TInteger>::Compute(tensorflow::OpKernelCon
 	{
 		cv::Mat _image;
 		const boost::uuids::uuid uuid = boost::uuids::random_generator()();
-		const std::string prefix = CMAKE_BINARY_DIR "/" + boost::uuids::to_string(uuid) + "_";
-		cv::cvtColor(openpose::tensor_mat<_TPixel, 3>(image.tensor<TPixel, 3>()), _image, cv::COLOR_BGR2RGB);
-		cv::imwrite(prefix + "image.jpg", _image);
-		cv::imwrite(prefix + "mask.jpg", openpose::tensor_mat<_TPixel>(mask.tensor<TPixel, 3>()));
-#ifdef ENABLE_NPY
-		openpose::save_npy<tensorflow::int32>(keypoints.tensor<TReal, 3>(), prefix + "keypoints.npy");
+#ifdef NDEBUG
+		const std::string prefix = boost::uuids::to_string(uuid);
+#else
+		const std::string prefix = CMAKE_BINARY_DIR "/" + boost::uuids::to_string(uuid);
 #endif
-		std::ofstream fs(prefix + "err.txt");
+		cv::cvtColor(openpose::tensor_mat<_TPixel, 3>(image.tensor<TPixel, 3>()), _image, cv::COLOR_BGR2RGB);
+		cv::imwrite(prefix + ".jpg", _image);
+		cv::imwrite(prefix + ".mask.jpg", openpose::tensor_mat<_TPixel>(mask.tensor<TPixel, 3>()));
+#ifdef ENABLE_NPY
+		openpose::save_npy<tensorflow::int32>(keypoints.tensor<TReal, 3>(), prefix + ".npy");
+#endif
+		std::ofstream fs(prefix + ".txt");
 		fs << "scale=" << _scale << std::endl;
 		fs << "rotate=" << _rotate << std::endl;
 		fs << boost::diagnostic_information(e);

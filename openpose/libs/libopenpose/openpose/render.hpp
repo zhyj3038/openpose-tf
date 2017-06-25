@@ -93,4 +93,81 @@ cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &im
 	cv::addWeighted(image, 0.5, mat, 0.5, 0.0, canvas);
 	return canvas;
 }
+
+template <typename _TPixel, int cn, typename _T, typename _TTensor, int Options>
+cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &image, const std::pair<Eigen::DenseIndex, Eigen::DenseIndex> &limb_index, Eigen::TensorMap<_TTensor, Options> parts, const std::vector<std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > > &peaks, const std::list<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > &connections, typename std::enable_if<_TTensor::NumIndices == 3>::type* = nullptr)
+{
+	typedef Eigen::DenseIndex _TIndex;
+	typedef cv::Vec<_TPixel, cn> _TVec;
+	typedef cv::Mat_<_TVec> _TMat;
+
+	assert(image.rows > 0 && image.cols > 0);
+	assert(parts.dimension(0) > 0 && parts.dimension(1) > 0);
+
+	_TMat canvas = image.clone();
+	for (auto c = connections.begin(); c != connections.end(); ++c)
+	{
+		const auto &connection = *c;
+		const auto &_p1 = peaks[limb_index.first][std::get<0>(connection)];
+		const _T y1 = std::get<0>(_p1) * image.rows / parts.dimension(0), x1 = std::get<1>(_p1) * image.cols / parts.dimension(1);
+		const auto &_p2 = peaks[limb_index.second][std::get<1>(connection)];
+		const _T y2 = std::get<0>(_p2) * image.rows / parts.dimension(0), x2 = std::get<1>(_p2) * image.cols / parts.dimension(1);
+		cv::line(canvas, cv::Point(x1, y1), cv::Point(x2, y2), CV_RGB(0, 0, 0), 3);
+		cv::putText(canvas, (boost::format("%d") % limb_index.first).str(), cv::Point(x1, y1), cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 255, 255), 1, 20);
+		cv::putText(canvas, (boost::format("%d") % limb_index.second).str(), cv::Point(x2, y2), cv::FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255, 255, 255), 1, 20);
+	}
+	return canvas;
+}
+
+template <typename _TPixel, int cn, typename _T, typename _TTensor, int Options>
+cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &image, const std::vector<std::pair<Eigen::DenseIndex, Eigen::DenseIndex> > &limbs_index, Eigen::TensorMap<_TTensor, Options> parts, const std::vector<std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > > &peaks, const std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > &clusters, typename std::enable_if<_TTensor::NumIndices == 3>::type* = nullptr)
+{
+	typedef Eigen::DenseIndex _TIndex;
+	typedef cv::Vec<_TPixel, cn> _TVec;
+	typedef cv::Mat_<_TVec> _TMat;
+	static const std::vector<cv::Scalar> colors = {
+		CV_RGB(255, 0, 0),
+		CV_RGB(0, 255, 0),
+		CV_RGB(0, 0, 255),
+		CV_RGB(0, 255, 255),
+		CV_RGB(255, 0, 255),
+		CV_RGB(255, 255, 0),
+		CV_RGB(127, 0, 0),
+		CV_RGB(0, 127, 0),
+		CV_RGB(0, 0, 127),
+		CV_RGB(0, 127, 127),
+		CV_RGB(127, 0, 127),
+		CV_RGB(127, 127, 0)
+	};
+
+	assert(image.rows > 0 && image.cols > 0);
+	assert(parts.dimension(0) > 0 && parts.dimension(1) > 0);
+
+	_TMat canvas = image.clone();
+	size_t index = 0;
+	for (auto c = clusters.begin(); c != clusters.end(); ++c)
+	{
+		const auto &cluster = *c;
+		const std::vector<_TIndex> &points = std::get<0>(cluster);
+		assert(points.size() == parts.dimension(2));
+		const auto &color = colors[index % colors.size()];
+		for (size_t l = 0; l < limbs_index.size(); ++l)
+		{
+			const std::pair<_TIndex, _TIndex> &limb_index = limbs_index[l];
+			const _TIndex p1 = points[limb_index.first], p2 = points[limb_index.second];
+			if (p1 >= 0 && p2 >= 0)
+			{
+				const auto &_p1 = peaks[limb_index.first][p1];
+				const _T y1 = std::get<0>(_p1) * image.rows / parts.dimension(0), x1 = std::get<1>(_p1) * image.cols / parts.dimension(1);
+				const auto &_p2 = peaks[limb_index.second][p2];
+				const _T y2 = std::get<0>(_p2) * image.rows / parts.dimension(0), x2 = std::get<1>(_p2) * image.cols / parts.dimension(1);
+				cv::line(canvas, cv::Point(x1, y1), cv::Point(x2, y2), color, 3);
+				cv::putText(canvas, (boost::format("%d") % limb_index.first).str(), cv::Point(x1, y1), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1, 20);
+				cv::putText(canvas, (boost::format("%d") % limb_index.second).str(), cv::Point(x2, y2), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1, 20);
+			}
+		}
+		index += 1;
+	}
+	return canvas;
+}
 }

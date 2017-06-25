@@ -23,9 +23,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <exception>
 #include <boost/format.hpp>
+#include <boost/exception/all.hpp>
 #include <tensorflow/core/framework/tensor_types.h>
 #include <opencv2/opencv.hpp>
-#include <openpose/check.hpp>
+#include <openpose/assert.hpp>
 #include <openpose/convert.hpp>
 #include <openpose/render.hpp>
 
@@ -34,32 +35,31 @@ namespace openpose
 namespace data
 {
 template <typename _TTensor, int Options>
-cv::Rect_<typename _TTensor::Scalar> calc_keypoints_rect(Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index)
+cv::Rect_<typename _TTensor::Scalar> calc_keypoints_rect(Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index, const cv::Size &size)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef typename _TTensor::Scalar _TReal;
-	check(keypoints.rank() == 3);
-	check(keypoints.dimension(2) == 3);
+	ASSERT_OPENPOSE(keypoints.rank() == 3);
+	ASSERT_OPENPOSE(keypoints.dimension(2) == 3);
 	_TReal xmin = std::numeric_limits<_TReal>::max(), xmax = std::numeric_limits<_TReal>::min();
 	_TReal ymin = std::numeric_limits<_TReal>::max(), ymax = std::numeric_limits<_TReal>::min();
 	for (_TIndex i = 0; i < keypoints.dimension(1); ++i)
 	{
 		if (keypoints(index, i, 2) > 0)
 		{
-			const _TReal x = keypoints(index, i, 0);
+			const _TReal x = std::min<_TReal>(std::max<_TReal>(keypoints(index, i, 0), 0), size.width - 1);
 			if (x < xmin)
 				xmin = x;
 			if (x > xmax)
 				xmax = x;
-			const _TReal y = keypoints(index, i, 1);
+			const _TReal y = std::min<_TReal>(std::max<_TReal>(keypoints(index, i, 1), 0), size.height - 1);
 			if (y < ymin)
 				ymin = y;
 			if (y > ymax)
 				ymax = y;
 		}
 	}
-	if (xmax < xmin || ymax < ymin)
-		throw std::runtime_error((boost::format("%d has no point") % index).str());
+	ASSERT_OPENPOSE(xmin <= xmax && ymin <= ymax);
 	return cv::Rect_<_TReal>(xmin, ymin, xmax - xmin, ymax - ymin);
 }
 
@@ -68,8 +68,8 @@ void rotate_points(const cv::Mat &rotate_mat, Eigen::TensorMap<_TTensor, Options
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef double _TRotate;
-	check(keypoints.rank() == 3);
-	check(keypoints.dimension(2) == 3);
+	ASSERT_OPENPOSE(keypoints.rank() == 3);
+	ASSERT_OPENPOSE(keypoints.dimension(2) == 3);
 	for (_TIndex i = 0; i < keypoints.dimension(0); ++i)
 		for (_TIndex j = 0; j < keypoints.dimension(1); ++j)
 			if (keypoints(i, j, 2) > 0)
@@ -116,17 +116,17 @@ cv::Rect_<_TReal> calc_bound_size(_TReal range, const cv::Size &size, const cv::
 		bound.height = std::min<_TReal>(range, size.height);
 		bound.width = bound.height * dsize.width / dsize.height;
 	}
-	check(bound.width <= size.width && bound.height <= size.height);
+	ASSERT_OPENPOSE(bound.width <= size.width && bound.height <= size.height);
 	return bound;
 }
 
 template <typename _TRandom, typename _TReal>
 void update_bound_pos(_TRandom &random, const cv::Rect_<_TReal> &keypoints_rect, const cv::Size &size, cv::Rect_<_TReal> &bound)
 {
-	check(bound.width <= size.width && bound.height <= size.height);
+	ASSERT_OPENPOSE(bound.width <= size.width && bound.height <= size.height);
 	const cv::Point_<_TReal> keypoints_br = keypoints_rect.br();
-	check(keypoints_rect.x >= 0 && keypoints_rect.y >= 0);
-	check(keypoints_br.x < size.width && keypoints_br.y < size.height);
+	ASSERT_OPENPOSE(keypoints_rect.x >= 0 && keypoints_rect.y >= 0);
+	ASSERT_OPENPOSE(keypoints_br.x < size.width && keypoints_br.y < size.height);
 	cv::Point_<_TReal> xy1(keypoints_br.x - bound.width, keypoints_br.y - bound.height);
 	if (xy1.x <= 0)
 		xy1.x = 0;
@@ -147,8 +147,8 @@ template <typename _TTensor, int Options>
 void move_scale_keypoints(const cv::Rect_<typename _TTensor::Scalar> &bound, const cv::Size &dsize, Eigen::TensorMap<_TTensor, Options> keypoints)
 {
 	typedef Eigen::DenseIndex _TIndex;
-	check(keypoints.rank() == 3);
-	check(keypoints.dimension(2) == 3);
+	ASSERT_OPENPOSE(keypoints.rank() == 3);
+	ASSERT_OPENPOSE(keypoints.dimension(2) == 3);
 	for (_TIndex i = 0; i < keypoints.dimension(0); ++i)
 		for (_TIndex j = 0; j < keypoints.dimension(1); ++j)
 			if (keypoints(i, j, 2) > 0)
@@ -171,7 +171,7 @@ void augmentation(_TRandom &random,
 	typedef cv::Mat_<_TVec3> _TMat3;
 	typedef cv::Mat_<_TPixel> _TMat1;
 
-	check(scale > 1);
+	ASSERT_OPENPOSE(scale > 1);
 	keypoints_result = keypoints;
 	_TMat3 _image_result;
 	_TMat1 _mask_result;
@@ -188,7 +188,7 @@ void augmentation(_TRandom &random,
 #endif
 	const cv::Size size(_image_result.cols, _image_result.rows);
 	const cv::Size dsize(image_result.dimension(1), image_result.dimension(0));
-	const cv::Rect_<_TReal> keypoints_rect = calc_keypoints_rect(keypoints_result, index);
+	const cv::Rect_<_TReal> keypoints_rect = calc_keypoints_rect(keypoints_result, index, size);
 	const _TReal range = std::max(keypoints_rect.width, keypoints_rect.height);
 	cv::Rect_<_TReal> bound = calc_bound_size(range * scale, size, dsize);
 	update_bound_pos(random, keypoints_rect, size, bound);

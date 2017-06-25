@@ -18,13 +18,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <fstream>
 #include <vector>
 #include <list>
+#include <type_traits>
 #include <boost/tokenizer.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/exception/all.hpp>
 
 namespace openpose
 {
 template <typename _TTensor>
-_TTensor load_tsv(const std::string &path, const char delimiter = '\t')
+_TTensor load_tsv_tensor(const std::string &path, const char delimiter = '\t', typename std::enable_if<_TTensor::NumIndices == 2>::type* = nullptr)
 {
 	typedef typename _TTensor::Scalar _TScalar;
 	typedef typename _TTensor::Index _TIndex;
@@ -56,6 +58,28 @@ _TTensor load_tsv(const std::string &path, const char delimiter = '\t')
 		++index;
 	}
 	return tensor;
+}
+
+template <typename _T>
+std::list<std::pair<_T, _T> > load_tsv_paired(const std::string &path, const char delimiter = '\t')
+{
+	typedef std::pair<_T, _T> _TRow;
+	typedef boost::char_delimiters_separator<char> _TSeparator;
+	typedef boost::tokenizer<_TSeparator> _TTokenizer;
+
+	std::list<_TRow> data;
+	std::ifstream fs(path.c_str());
+	std::string line;
+	_TSeparator sep(delimiter);
+	while (getline(fs, line))
+	{
+		_TTokenizer tok(line, sep);
+		const std::vector<std::string> _row(tok.begin(), tok.end());
+		if (_row.size() != 2)
+			BOOST_THROW_EXCEPTION(std::runtime_error(line));
+		data.push_back(std::make_pair(boost::lexical_cast<_T>(_row[0]), boost::lexical_cast<_T>(_row[1])));
+	}
+	return data;
 }
 }
 

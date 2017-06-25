@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <random>
 #include <boost/format.hpp>
 #include <Eigen/Core>
+#include <tensorflow/core/framework/tensor_types.h>
 #include <tensorflow/core/platform/default/integral_types.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
@@ -95,7 +96,7 @@ int main(void)
 #define IMAGE_EXT ".jpg"
 #define MASK_SUFFIX ".mask.jpg"
 	typedef std::mt19937 _TRandom;
-	typedef tensorflow::uint8 _TPixel;
+	typedef uchar _TPixel;
 	typedef float _TReal;
 #ifdef NDEBUG
 	_TRandom random(std::time(0));
@@ -104,28 +105,28 @@ int main(void)
 #endif
 	const std::pair<size_t, size_t> downsample = std::make_pair(8, 8);
 	{
-		const std::string prefix = std::string(DUMP_DIR) + "/COCO_val2014_000000000136";
+		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_val2014_000000000136";
 		const _TReal scale = 1.4529;
 		const _TReal rotate = 26.8007;
 		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
 			368, 368, downsample, scale, rotate, 0, 1);
 	}
 	{
-		const std::string prefix = std::string(DUMP_DIR) + "/COCO_val2014_000000000241";
+		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_val2014_000000000241";
 		const _TReal scale = 1.99419;
 		const _TReal rotate = -3.95667;
 		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
 			368, 368, downsample, scale, rotate, 255, 0);
 	}
 	{
-		const std::string prefix = std::string(DUMP_DIR) + "/COCO_train2014_000000000036";
+		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_train2014_000000000036";
 		const _TReal scale = 1.38945;
 		const _TReal rotate = -2.13689;
 		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
 			368, 368, downsample, scale, rotate, 255);
 	}
 	{
-		const std::string prefix = std::string(DUMP_DIR) + "/COCO_train2014_000000000077";
+		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_train2014_000000000077";
 		const _TReal scale = std::uniform_real_distribution<_TReal>(1, 1.5)(random);
 		const _TReal rotate = std::uniform_real_distribution<_TReal>(-40, 40)(random);
 		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",

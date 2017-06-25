@@ -15,8 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "check.hpp"
+#include "debug_global.hpp"
 
 namespace openpose
 {
+cv::Mat_<cv::Vec<uchar, 3> > image_;
+Eigen::Tensor<float, 3, Eigen::RowMajor, Eigen::DenseIndex> parts_;
 }
