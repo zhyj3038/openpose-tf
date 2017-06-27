@@ -72,8 +72,8 @@ def main():
     
     with tf.Session() as sess:
         image = tf.placeholder(tf.float32, [1, size_image[0], size_image[1], 3], name='image')
-        net = utils.parse_attr(config.get('config', 'backbone'))(config, image, train=True)
-        limbs, parts = utils.parse_attr(config.get('config', 'stages'))(config, net, len(limbs_index), num_parts)
+        net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
+        limbs, parts = utils.parse_attr(config.get('stages', 'dnn'))(config, net, len(limbs_index), num_parts)
         limbs = tf.check_numerics(limbs, limbs.op.name)
         parts = tf.check_numerics(parts[:, :, :, :-1], parts.op.name) # drop background channel
         model_path = tf.train.latest_checkpoint(logdir)

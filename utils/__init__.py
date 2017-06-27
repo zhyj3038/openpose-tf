@@ -64,8 +64,8 @@ def get_cachedir(config):
 def get_logdir(config):
     basedir = os.path.expanduser(os.path.expandvars(config.get('cache', 'basedir')))
     dataset = os.path.basename(config.get('cache', 'dataset'))
-    backbone = os.path.splitext(config.get('config', 'backbone'))[-1][1:]
-    stages = os.path.splitext(config.get('config', 'stages'))[-1][1:]
+    backbone = os.path.splitext(config.get('backbone', 'dnn'))[-1][1:]
+    stages = os.path.splitext(config.get('stages', 'dnn'))[-1][1:]
     return os.path.join(basedir, dataset, backbone, stages)
 
 
@@ -81,7 +81,7 @@ def parse_attr(s):
 
 
 def get_backbone_downsampling(config):
-    module, name = config.get('config', 'backbone').rsplit('.', 1)
+    module, name = config.get('backbone', 'dnn').rsplit('.', 1)
     module = importlib.import_module(module)
     return getattr(module, name.upper() + '_DOWNSAMPLING')
 

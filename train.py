@@ -97,15 +97,10 @@ class GradientMultipliers(list):
         raise ValueError(name + ' not found in gradient multiplier list')
 
 
-def get_gradient_multipliers(config):
-    try:
-        paths = config.get('config', 'gradient_multipliers').split(':')
-    except configparser.NoOptionError:
-        tf.logging.warn('gradient_multipliers disabled')
-        return None
+def get_gradient_multipliers(paths, variables):
     gm = GradientMultipliers(paths)
     gradient_multipliers = []
-    for v in tf.trainable_variables():
+    for v in variables:
         name = v.op.name
         gradient_multipliers.append(gm(name))
     return dict(gradient_multipliers)
@@ -151,10 +146,14 @@ def main():
         with tf.name_scope('output'):
             image, mask, limbs, parts = tf.identity(image, 'image'), tf.identity(mask, 'mask'), tf.identity(limbs, 'limbs'), tf.identity(parts, 'parts')
     global_step = tf.contrib.framework.get_or_create_global_step()
-    net = utils.parse_attr(config.get('config', 'backbone'))(config, image, train=True)
+    net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
     assert tuple(net.get_shape().as_list()[1:3]) == size_label
-    utils.parse_attr(config.get('config', 'stages'))(config, net, limbs, parts, mask)
-    gradient_multipliers = get_gradient_multipliers(config)
+    utils.parse_attr(config.get('stages', 'dnn'))(config, net, limbs, parts, mask)
+    try:
+        gradient_multipliers = get_gradient_multipliers([config.get('backbone', 'gradient_multipliers'), config.get('stages', 'gradient_multipliers')], tf.trainable_variables())
+    except configparser.NoOptionError:
+        tf.logging.warn('gradient_multipliers disabled')
+        gradient_multipliers = None
     with tf.name_scope('total_loss') as name:
         total_loss = tf.losses.get_total_loss(name=name)
     variables_to_restore = slim.get_variables_to_restore(exclude=args.exclude)

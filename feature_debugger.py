@@ -146,8 +146,8 @@ def main():
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     with tf.Session() as sess:
         image = tf.placeholder(tf.float32, [1, size_image[0], size_image[1], 3], name='image')
-        net = utils.parse_attr(config.get('config', 'backbone'))(config, image, train=True)
-        utils.parse_attr(config.get('config', 'stages'))(config, net, len(limbs_index), num_parts)
+        net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
+        utils.parse_attr(config.get('stages', 'dnn'))(config, net, len(limbs_index), num_parts)
         model_path = tf.train.latest_checkpoint(logdir)
         tf.logging.info('load ' + model_path)
         slim.assign_from_checkpoint_fn(model_path, tf.global_variables())(sess)
