@@ -15,57 +15,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import sys
 import os
 import argparse
 import configparser
 import numpy as np
 import scipy.misc
-from PyQt4 import QtCore, QtGui
 import matplotlib.pyplot as plt
-import matplotlib.backends.backend_qt4agg
 import tensorflow as tf
 import pyopenpose
 import utils.data
-import utils.visualize
-
-
-class Visualizer(QtGui.QDialog):
-    def __init__(self, name, image, mask, feature):
-        super(Visualizer, self).__init__()
-        utils.visualize.draw_mask(image, mask.astype(np.uint8) * 255)
-        self.name = name
-        self.image = image
-        self.feature = feature
-        
-        layout = QtGui.QVBoxLayout(self)
-        fig = plt.Figure()
-        self.ax = fig.gca()
-        self.canvas = matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg(fig)
-        layout.addWidget(self.canvas)
-        toolbar = matplotlib.backends.backend_qt4agg.NavigationToolbar2QT(self.canvas, self)
-        layout.addWidget(toolbar)
-        self.slider = QtGui.QSlider(QtCore.Qt.Horizontal, self)
-        self.slider.setRange(0, feature.shape[2] - 1)
-        layout.addWidget(self.slider)
-        self.slider.valueChanged[int].connect(self.on_progress)
-        
-        self.ax.imshow(self.image)
-        self.ax.set_xticks([])
-        self.ax.set_yticks([])
-        self.on_progress(0)
-
-    def on_progress(self, index):
-        try:
-            self.last.remove()
-        except AttributeError:
-            pass
-        feature = self.feature[:, :, index]
-        feature = scipy.misc.imresize(feature, self.image.shape[:2])
-        self.last = self.ax.imshow(feature, alpha=args.alpha)
-        self.canvas.draw()
-        plt.draw()
-        self.setWindowTitle('%s %d/%d' % (self.name, index + 1, self.feature.shape[2]))
 
 
 def main():
@@ -80,23 +38,58 @@ def main():
     paths = [os.path.join(cachedir, profile + '.tfrecord') for profile in args.profile]
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
+    threshold = config.getfloat('nms', 'threshold')
+    limits = config.getint('nms', 'limits')
     with tf.Session() as sess:
         data = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs_index)
         tf.global_variables_initializer().run()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess, coord)
         while True:
-            image, mask, _, limbs, parts = sess.run(data)
+            image, _, keypoints, limbs, parts = sess.run(data)
             assert image.shape[:2] == size_image
             assert limbs.shape[:2] == size_label
             assert parts.shape[:2] == size_label
             image = image.astype(np.uint8)
             assert limbs.shape[2] == len(limbs_index) * 2
             assert parts.shape[2] == num_parts + 1
-            dialog = Visualizer('limbs', image, mask, limbs)
-            dialog.exec()
-            dialog = Visualizer('parts', image, mask, parts)
-            dialog.exec()
+            scale_y, scale_x = size_image[0] / size_label[0], size_image[1] / size_label[1]
+            for i, (i1, i2) in enumerate(limbs_index):
+                fig, axes = plt.subplots(2, 2)
+                for ax in axes[0]:
+                    ax.imshow(image)
+                part1, part2 = parts[:, :, i1], parts[:, :, i2]
+                axes[0, 0].imshow(scipy.misc.imresize(part1, image.shape[:2]), alpha=args.alpha)
+                axes[0, 1].imshow(scipy.misc.imresize(part2, image.shape[:2]), alpha=args.alpha)
+                _limbs = limbs[:, :, i * 2:(i + 1) * 2]
+                vmin, vmax = np.min(_limbs), np.max(_limbs)
+                limb1, limb2 = np.transpose(_limbs, [2, 0, 1])
+                axes[1, 0].imshow(scipy.misc.imresize(limb1, image.shape[:2]), vmin=vmin, vmax=vmax, alpha=args.alpha)
+                axes[1, 1].imshow(scipy.misc.imresize(limb2, image.shape[:2]), vmin=vmin, vmax=vmax, alpha=args.alpha)
+                peaks1 = pyopenpose.feature_peaks(parts[:, :, i1], threshold, limits)
+                peaks2 = pyopenpose.feature_peaks(parts[:, :, i2], threshold, limits)
+                for ax in axes[1]:
+                    """
+                    for points in keypoints:
+                        x, y, v = points[i1].T
+                        if v > 0:
+                            ax.plot(x, y, 'x', color=args.color1)
+                        x, y, v = points[i2].T
+                        if v > 0:
+                            ax.plot(x, y, 'x', color=args.color2)"""
+                    for y, x, _ in peaks1:
+                        tf.logging.info('(%f, %f)' % (limb1[y, x], limb2[y, x]))
+                        ax.plot(x * scale_x, y * scale_y, '.', color=args.color1)
+                    for y, x, _ in peaks2:
+                        tf.logging.info('(%f, %f)' % (limb1[y, x], limb2[y, x]))
+                        ax.plot(x * scale_x, y * scale_y, '.', color=args.color2)
+                for ax in axes.flat:
+                    ax.set_xlim([0, size_image[1] - 1])
+                    ax.set_ylim([size_image[0] - 1, 0])
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+                fig.canvas.set_window_title('limb%d (%d-%d)' % (i, i1, i2))
+                plt.show()
         coord.request_stop()
         coord.join(threads)
 
@@ -105,6 +98,8 @@ def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
     parser.add_argument('-p', '--profile', nargs='+', default=['train', 'val'])
+    parser.add_argument('--color1', default='r')
+    parser.add_argument('--color2', default='g')
     parser.add_argument('--alpha', type=float, default=0.5)
     parser.add_argument('--level', default='info', help='logging level')
     return parser.parse_args()
@@ -115,6 +110,4 @@ if __name__ == '__main__':
     utils.load_config(config, args.config)
     if args.level:
         tf.logging.set_verbosity(args.level.upper())
-    app = QtGui.QApplication(sys.argv)
     main()
-    sys.exit(app.exec_())

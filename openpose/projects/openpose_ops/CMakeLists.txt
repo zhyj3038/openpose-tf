@@ -40,8 +40,8 @@ if(EXISTS ${CNPY_DIR})
 	add_definitions(-DENABLE_NPY)
 endif()
 
-include_directories(${CMAKE_SOURCE_DIR}/libs/libopenpose)
-target_link_libraries(${PROJECT_NAME} libopenpose)
+include_directories(${CMAKE_SOURCE_DIR}/libs/openpose)
+target_link_libraries(${PROJECT_NAME} openpose)
 
 get_filename_component(OP_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${OP_NAME})

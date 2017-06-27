@@ -59,7 +59,7 @@ std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > limit_peaks(c
 	typedef std::vector<_TPeak> _TPeaks;
 	_TPeaks _peaks(peaks.begin(), peaks.end());
 	const size_t _limits = std::min(_peaks.size(), limits);
-	std::partial_sort(_peaks.begin(), _peaks.begin() + _limits, _peaks.end(), [](const _TPeak &a, const _TPeak &b)->bool{return std::get<2>(a) < std::get<2>(b);});
+	std::partial_sort(_peaks.begin(), _peaks.begin() + _limits, _peaks.end(), [](const _TPeak &a, const _TPeak &b)->bool{return std::get<2>(a) > std::get<2>(b);});
 	_peaks.resize(_limits);
 	return _peaks;
 }

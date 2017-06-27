@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <list>
 #include <tuple>
 #include <type_traits>
+#include <iostream>
+#include <boost/format.hpp>
 #include <tensorflow/core/framework/tensor_types.h>
 #ifdef DEBUG_SHOW
 #include <openpose/debug_global.hpp>
@@ -33,6 +35,7 @@ namespace openpose
 namespace postprocess
 {
 size_t points_count(const std::vector<Eigen::DenseIndex> &points);
+size_t limbs_points(const std::vector<std::pair<Eigen::DenseIndex, Eigen::DenseIndex> > &limbs_index);
 
 template <typename _T>
 bool check_connections(const std::list<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > &connections)
@@ -146,6 +149,7 @@ std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > cl
 	typedef std::tuple<_TPoints, _T, _TIndex> _TCluster;
 	std::list<_TCluster> clusters;
 	assert(limbs.dimension(2) == limbs_index.size() * 2);
+	assert(limbs_points(limbs_index) == peaks.size());
 	for (_TIndex index = 0; index < limbs_index.size(); ++index)
 	{
 		const std::pair<_TIndex, _TIndex> &limb_index = limbs_index[index];
@@ -153,6 +157,7 @@ std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > cl
 		assert(0 <= limb_index.second && limb_index.second < peaks.size());
 		const auto &peaks1 = peaks[limb_index.first];
 		const auto &peaks2 = peaks[limb_index.second];
+#if 0
 		if (peaks1.empty() && peaks2.empty())
 			continue;
 		if (peaks1.empty())
@@ -183,6 +188,7 @@ std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > cl
 			}
 			continue;
 		}
+#endif
 		const _TIndex channel = index * 2;
 		auto connections = calc_limb_score(channel, limbs, peaks1, peaks2, steps, min_score, min_count);
 		filter_connections(connections, peaks1.size(), peaks2.size());
@@ -192,9 +198,10 @@ std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > cl
 			typename tensorflow::TTypes<_T, 3>::ConstTensor _parts_(parts_.data(), parts_.dimensions());
 			const auto _canvas = render(image_, limbs_index, _parts_, peaks, clusters);
 			const auto canvas = render(_canvas, limb_index, _parts_, peaks, connections);
-			const std::string title = (boost::format("before: limb %d(%d-%d)") % index % limb_index.first % limb_index.second).str();
+			const std::string title = (boost::format("before: limb%d (%d-%d)") % index % limb_index.first % limb_index.second).str();
 			cv::imshow(title, canvas);
 			cv::moveWindow(title, 0, 0);
+			std::cout << title << std::endl;
 		}
 #endif
 #endif
@@ -208,30 +215,26 @@ std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > cl
 				auto c = find_cluster(peak1, clusters, limb_index.first, p1);
 				if (c != clusters.end())
 				{
+#if 1
+#ifdef DEBUG_SHOW
+					std::cout << boost::format("cluster%d (%d->%d)") % std::distance(clusters.begin(), c) % p1 % p2 << std::endl;
+#endif
+#endif
 					auto &cluster = *c;
 					auto &points = std::get<0>(cluster);
 					assert(points[limb_index.first] == p1);
-					assert(points[limb_index.second] == -1);
+					//assert(points[limb_index.second] == -1);
 					points[limb_index.second] = p2;
 					std::get<1>(cluster) += std::get<2>(connection) + std::get<2>(peak2);
 					std::get<2>(cluster) += 1;
 					continue;
 				}
 			}
-			{
-				auto c = find_cluster(peak2, clusters, limb_index.second, p2);
-				if (c != clusters.end())
-				{
-					auto &cluster = *c;
-					auto &points = std::get<0>(cluster);
-					assert(points[limb_index.second] == p2);
-					assert(points[limb_index.first] == -1);
-					points[limb_index.first] = p1;
-					std::get<1>(cluster) += std::get<2>(connection) + std::get<2>(peak1);
-					std::get<2>(cluster) += 1;
-					continue;
-				}
-			}
+#if 1
+#ifdef DEBUG_SHOW
+			std::cout << boost::format("cluster%d (%d-%d)") % clusters.size() % p1 % p2 << std::endl;
+#endif
+#endif
 			_TPoints points(peaks.size(), -1);
 			points[limb_index.first] = p1;
 			points[limb_index.second] = p2;
@@ -244,6 +247,7 @@ std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > cl
 			const std::string title = (boost::format("after: limb%d (%d-%d)") % index % limb_index.first % limb_index.second).str();
 			cv::imshow(title, canvas);
 			cv::moveWindow(title, canvas.cols, 0);
+			std::cout << title << std::endl;
 			cv::waitKey(0);
 			cv::destroyAllWindows();
 		}

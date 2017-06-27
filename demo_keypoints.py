@@ -22,14 +22,16 @@ import numpy as np
 import scipy.misc
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import pyopenpose
 import utils.visualize
 
 
 def main():
-    limbs_index = utils.get_limbs_index(config)
     cachedir = utils.get_cachedir(config)
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
+    limbs_index = utils.get_limbs_index(config)
+    assert pyopenpose.limbs_points(limbs_index) == num_parts
     paths = [os.path.join(cachedir, profile + '.tfrecord') for profile in args.profile]
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.info('num_examples=%d' % num_examples)

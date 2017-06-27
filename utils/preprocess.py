@@ -54,3 +54,9 @@ def resize(image, size):
     m[0, 0] = scale
     m[1, 1] = scale
     return cv2.warpAffine(image, m, size, flags=cv2.INTER_CUBIC)
+
+
+def calc_image_scale(size, image_size):
+    assert len(image_size) == 2
+    _image_size = max(image_size)
+    return _image_size / size[0], _image_size / size[1]

@@ -21,9 +21,12 @@ import configparser
 import shutil
 import time
 import inspect
+import csv
+import re
 import multiprocessing
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+import pyopenpose
 import utils.data
 
 
@@ -50,7 +53,7 @@ def summary_image(config):
             if len(shape) == 4:
                 channels = shape[-1]
                 if channels not in (1, 3, 4):
-                    with tf.name_scope(name + '_c'):
+                    with tf.name_scope(name):
                         for c in range(channels):
                             _t = t[:, :, :, c:c + 1]
                             tf.summary.image('c%d' % c, _t, image_max)
@@ -79,6 +82,35 @@ def summary(config):
     summary_histogram(config)
 
 
+class GradientMultipliers(list):
+    def __init__(self, paths):
+        for path in paths:
+            path = os.path.expanduser(os.path.expandvars(path))
+            with open(path, 'r') as f:
+                for pattern, scale in csv.reader(f, delimiter='\t'):
+                    self.append((re.compile(pattern), int(scale)))
+    
+    def __call__(self, name):
+        for prog, scale in self:
+            if prog.match(name):
+                return name, scale
+        raise ValueError(name + ' not found in gradient multiplier list')
+
+
+def get_gradient_multipliers(config):
+    try:
+        paths = config.get('config', 'gradient_multipliers').split(':')
+    except configparser.NoOptionError:
+        tf.logging.warn('gradient_multipliers disabled')
+        return None
+    gm = GradientMultipliers(paths)
+    gradient_multipliers = []
+    for v in tf.trainable_variables():
+        name = v.op.name
+        gradient_multipliers.append(gm(name))
+    return dict(gradient_multipliers)
+
+
 def get_optimizer(config, name):
     section = 'optimizer_' + name
     return {
@@ -101,6 +133,7 @@ def main():
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
     limbs_index = utils.get_limbs_index(config)
+    assert pyopenpose.limbs_points(limbs_index) == num_parts
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     size_label = utils.calc_backbone_size(config, size_image)
     tf.logging.warn('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
@@ -117,11 +150,11 @@ def main():
         image, mask, limbs, parts = batch
         with tf.name_scope('output'):
             image, mask, limbs, parts = tf.identity(image, 'image'), tf.identity(mask, 'mask'), tf.identity(limbs, 'limbs'), tf.identity(parts, 'parts')
-            mask = tf.squeeze(mask, name='mask_squeezed')
     global_step = tf.contrib.framework.get_or_create_global_step()
     net = utils.parse_attr(config.get('config', 'backbone'))(config, image, train=True)
     assert tuple(net.get_shape().as_list()[1:3]) == size_label
     utils.parse_attr(config.get('config', 'stages'))(config, net, limbs, parts, mask)
+    gradient_multipliers = get_gradient_multipliers(config)
     with tf.name_scope('total_loss') as name:
         total_loss = tf.losses.get_total_loss(name=name)
     variables_to_restore = slim.get_variables_to_restore(exclude=args.exclude)
@@ -139,6 +172,7 @@ def main():
         tf.logging.warn('optimizer=' + args.optimizer)
         train_op = slim.learning.create_train_op(total_loss, optimizer, global_step,
             clip_gradient_norm=args.gradient_clip, summarize_gradients=config.getboolean('summary', 'gradients'),
+            gradient_multipliers=gradient_multipliers
         )
     if args.transfer:
         path = os.path.expanduser(os.path.expandvars(args.transfer))

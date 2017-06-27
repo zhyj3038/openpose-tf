@@ -35,6 +35,7 @@ def estimate(config, image, limbs_index, limbs, parts):
         dump = os.path.expanduser(os.path.expandvars(args.dump))
         tf.logging.warn('dump feature map into ' + dump)
         os.makedirs(dump, exist_ok=True)
+        np.savetxt(os.path.join(dump, 'limbs_index.tsv'), limbs_index, fmt='%d', delimiter='\t')
         scipy.misc.imsave(os.path.join(dump, 'image.jpg'), image)
         np.save(os.path.join(dump, 'limbs.npy'), limbs)
         np.save(os.path.join(dump, 'parts.npy'), parts)
@@ -51,15 +52,14 @@ def estimate(config, image, limbs_index, limbs, parts):
         utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, 0, 1)
     elif args.show == 'connection':
         utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count)
-    elif args.show == 'clusters':
+    elif args.show == 'cluster':
         utils.visualize.show_clusters(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count)
     results = pyopenpose.estimate(limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, cluster_min_score, cluster_min_count)
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)
-    height, width, _ = image.shape
-    _height, _width, _ = parts.shape
-    utils.visualize.draw_results(ax, height / _height, width / _width, results)
+    scale_y, scale_x = utils.preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
+    utils.visualize.draw_results(ax, scale_y, scale_x, results)
     ax.set_xticks([])
     ax.set_yticks([])
     return fig
@@ -86,6 +86,7 @@ def main():
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
     limbs_index = utils.get_limbs_index(config)
+    assert pyopenpose.limbs_points(limbs_index) == num_parts
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     with tf.Session() as sess:
         image = tf.placeholder(tf.float32, [1, size_image[0], size_image[1], 3], name='image')
@@ -100,7 +101,7 @@ def main():
         if os.path.isfile(path):
             image_rgb, image_resized = read_image(path, size_image[::-1])
             _limbs, _parts = eval_tensor(sess, image, image_resized, [limbs, parts])
-            estimate(config, image_resized, limbs_index, _limbs, _parts)
+            estimate(config, image_rgb, limbs_index, _limbs, _parts)
             plt.show()
         else:
             for dirpath, _, filenames in os.walk(path):
@@ -110,7 +111,7 @@ def main():
                         print(_path)
                         image_rgb, image_resized = read_image(_path, size_image[::-1])
                         _limbs, _parts = eval_tensor(sess, image, image_resized, [limbs, parts])
-                        estimate(config, image_resized, limbs_index, _limbs, _parts)
+                        estimate(config, image_rgb, limbs_index, _limbs, _parts)
                         plt.show()
 
 

@@ -98,7 +98,7 @@ int main(void)
 	const std::pair<size_t, size_t> downsample = std::make_pair(8, 8);
 	{
 		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_train2014_000000000077";
-		test<_TPixel, _TInteger>(prefix + IMAGE_EXT, prefix + ".npy", DUMP_DIR "/limbs_index.tsv", downsample, sigma_parts, sigma_limbs);
+		test<_TPixel, _TInteger>(prefix + IMAGE_EXT, prefix + ".npy", DUMP_DIR "/data.tsv", downsample, sigma_parts, sigma_limbs);
 	}
 	return 0;
 }

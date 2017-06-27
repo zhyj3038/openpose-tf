@@ -29,6 +29,7 @@ PYBIND11_PLUGIN(PROJECT_NAME) {
 	m.def("featuremap_peaks", &featuremap_peaks<float>);
 	m.def("featuremap_peaks", &featuremap_peaks<double>);
 	//hungarian
+	m.def("limbs_points", &openpose::postprocess::limbs_points);
 	m.def("calc_limb_score", &calc_limb_score<float>);
 	m.def("calc_limb_score", &calc_limb_score<double>);
 	m.def("filter_connections", &openpose::postprocess::filter_connections<float>);

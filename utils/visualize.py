@@ -20,6 +20,7 @@ import numpy as np
 import scipy.misc
 import matplotlib.pyplot as plt
 import pyopenpose
+from . import preprocess
 
 
 def draw_mask(image, mask):
@@ -31,17 +32,16 @@ def draw_mask(image, mask):
 
 
 def draw_keypoints(ax, keypoints, limbs_index, colors=['r', 'w'], alpha=0.3):
-    limb_colors = [prop['color'] for _, prop in zip(limbs_index, itertools.cycle(plt.rcParams['axes.prop_cycle']))]
     for _keypoints in keypoints:
         for i, (x, y, v) in enumerate(_keypoints):
             assert v >= 0
             if v > 0:
                 ax.text(x, y, str(i), bbox=dict(facecolor=colors[v - 1], alpha=alpha))
-        for i, (i1, i2) in enumerate(limbs_index):
+        for color, (i1, i2) in zip(itertools.cycle(prop['color'] for prop in plt.rcParams['axes.prop_cycle']), limbs_index):
             x1, y1, v1 = _keypoints[i1].T
             x2, y2, v2 = _keypoints[i2].T
             if v1 > 0 and v2 > 0:
-                ax.plot([x1, x2], [y1, y2], color=limb_colors[i])
+                ax.plot([x1, x2], [y1, y2], color=color)
 
 
 def draw_peaks(ax, scale_y, scale_x, peaks, text, color='w', alpha=0.5):
@@ -51,23 +51,22 @@ def draw_peaks(ax, scale_y, scale_x, peaks, text, color='w', alpha=0.5):
 
 
 def draw_results(ax, scale_y, scale_x, results):
-    for prop, keypoints in zip(itertools.cycle(plt.rcParams['axes.prop_cycle']), results):
+    for color, keypoints in zip(itertools.cycle(prop['color'] for prop in plt.rcParams['axes.prop_cycle']), results):
         for (y1, x1), (y2, x2) in keypoints:
             y1, x1 = y1 * scale_y, x1 * scale_x
             y2, x2 = y2 * scale_y, x2 * scale_x
-            ax.plot([x1, x2], [y1, y2], color=prop['color'])
+            ax.plot([x1, x2], [y1, y2], color=color)
 
 
 def show_nms(image, parts, threshold, limits, alpha=0.5):
-    height, width, _ = image.shape
-    _height, _width, _ = parts.shape
-    scale_y, scale_x = height / _height, width / _width
+    scale_y, scale_x = preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
+    maxsize = max(image.shape[:2])
     for index, feature in enumerate(np.transpose(parts, [2, 0, 1])):
         peaks = pyopenpose.feature_peaks(feature, threshold, limits)
         fig = plt.figure()
         ax = fig.gca()
         ax.imshow(image)
-        ax.imshow(scipy.misc.imresize(feature, (height, width)), alpha=alpha)
+        ax.imshow(scipy.misc.imresize(feature, (maxsize, maxsize)), alpha=alpha)
         draw_peaks(ax, scale_y, scale_x, peaks, str(index))
         ax.set_xticks([])
         ax.set_yticks([])
@@ -87,20 +86,18 @@ def show_nms(image, parts, threshold, limits, alpha=0.5):
 
 
 def show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, alpha=0.5, linewidth=10):
-    height, width, _ = image.shape
-    _height, _width, _ = limbs.shape
-    scale_y, scale_x = height / _height, width / _width
+    scale_y, scale_x = preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
     peaks = pyopenpose.featuremap_peaks(parts, threshold, limits)
     assert len(peaks) == parts.shape[-1]
-    _limbs = np.reshape(limbs, [_height, _width, -1, 2])
+    _limbs = np.reshape(limbs, limbs.shape[:2] + (-1, 2))
     _limbs = np.transpose(_limbs, [2, 3, 0, 1])
-    limb_colors = [prop['color'] for _, prop in zip(limbs_index, itertools.cycle(plt.rcParams['axes.prop_cycle']))]
-    for index, ((i1, i2), (limb_x, limb_y), color) in enumerate(zip(limbs_index, _limbs, limb_colors)):
+    maxsize = max(image.shape[:2])
+    for index, (color, (i1, i2), (limb_x, limb_y)) in enumerate(zip(itertools.cycle(prop['color'] for prop in plt.rcParams['axes.prop_cycle']), limbs_index, _limbs)):
         fig, axes = plt.subplots(1, 3)
         for ax in axes.flat:
             ax.imshow(image)
-        axes.flat[0].imshow(scipy.misc.imresize(limb_x, (height, width)), alpha=alpha)
-        axes.flat[1].imshow(scipy.misc.imresize(limb_y, (height, width)), alpha=alpha)
+        axes.flat[0].imshow(scipy.misc.imresize(limb_x, (maxsize, maxsize)), alpha=alpha)
+        axes.flat[1].imshow(scipy.misc.imresize(limb_y, (maxsize, maxsize)), alpha=alpha)
         for i, _peaks in enumerate(peaks):
             for ax in axes.flat[:2]:
                 for j, (y, x, _) in enumerate(_peaks):
@@ -138,18 +135,15 @@ def show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, 
 
 
 def show_clusters(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, linewidth=10):
-    height, width, _ = image.shape
-    _height, _width, _ = limbs.shape
-    scale_y, scale_x = height / _height, width / _width
+    scale_y, scale_x = preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
     peaks = pyopenpose.featuremap_peaks(parts, threshold, limits)
     assert len(peaks) == parts.shape[-1]
     clusters = pyopenpose.clustering(limbs_index, limbs, peaks, steps, min_score, min_count)
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)
-    colors = [prop['color'] for _, prop in zip(clusters, itertools.cycle(plt.rcParams['axes.prop_cycle']))]
     max_score = max(clusters, key=lambda item: item[1])[1] if clusters else 0
-    for (points, score, count), color in zip(clusters, colors):
+    for color, (points, score, count) in zip(itertools.cycle(prop['color'] for prop in plt.rcParams['axes.prop_cycle']), clusters):
         assert len(points) == len(peaks)
         assert sum(1 for p in points if p >= 0) == count
         assert count > 0

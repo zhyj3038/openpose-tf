@@ -28,6 +28,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg, NavigationToolbar2QT
 import cv2
+import pyopenpose
 import utils.preprocess
 
 
@@ -141,6 +142,7 @@ def main():
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
     limbs_index = utils.get_limbs_index(config)
+    assert pyopenpose.limbs_points(limbs_index) == num_parts
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     with tf.Session() as sess:
         image = tf.placeholder(tf.float32, [1, size_image[0], size_image[1], 3], name='image')

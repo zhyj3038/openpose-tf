@@ -81,8 +81,8 @@ void make_limbs(Eigen::TensorMap<_TConstTensorReal, Options> keypoints, Eigen::T
 						const _TReal dist = std::abs(vx * norm_vec.second - vy * norm_vec.first);
 						if (dist <= sigma)
 						{
-							label(gy, gx, channel_x) += vx;
-							label(gy, gx, channel_y) += vy;
+							label(gy, gx, channel_x) += norm_vec.first;
+							label(gy, gx, channel_y) += norm_vec.second;
 							count(gy, gx) += 1;
 						}
 					}

@@ -1,0 +1,2 @@
+stages/stage\d+/(limbs|parts)/conv\d*/weights$	4
+stages/stage\d+/(limbs|parts)/conv\d*/biases$	8

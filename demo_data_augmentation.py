@@ -22,6 +22,7 @@ import multiprocessing
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import pyopenpose
 import utils.data
 import utils.visualize
 
@@ -31,6 +32,7 @@ def main():
     with open(cachedir + '.parts', 'r') as f:
         num_parts = int(f.read())
     limbs_index = utils.get_limbs_index(config)
+    assert pyopenpose.limbs_points(limbs_index) == num_parts
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     size_label = (size_image[0] // 8, size_image[1] // 8)
     tf.logging.info('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
@@ -69,8 +71,8 @@ def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
     parser.add_argument('-p', '--profile', nargs='+', default=['train', 'val'])
-    parser.add_argument('--rows', default=5, type=int)
-    parser.add_argument('--cols', default=5, type=int)
+    parser.add_argument('--rows', default=3, type=int)
+    parser.add_argument('--cols', default=3, type=int)
     parser.add_argument('--level', default='info', help='logging level')
     return parser.parse_args()
 

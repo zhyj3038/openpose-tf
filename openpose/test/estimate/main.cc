@@ -49,7 +49,7 @@ int main(void)
 	const _TReal min_score = 0.05;
 	const size_t min_count = 9;
 	const _TMat3 image = cv::imread(DUMP_DIR "/featuremap/image.jpg", CV_LOAD_IMAGE_COLOR);
-	const auto limbs_index = openpose::load_tsv_paired<Eigen::DenseIndex>(DUMP_DIR "/limbs_index.tsv");
+	const auto limbs_index = openpose::load_tsv_paired<Eigen::DenseIndex>(DUMP_DIR "/featuremap/limbs_index.tsv");
 	const _TTensorReal limbs = openpose::load_npy3<_TReal, _TTensorReal>(DUMP_DIR "/featuremap/limbs.npy");
 	const _TTensorReal parts = openpose::load_npy3<_TReal, _TTensorReal>(DUMP_DIR "/featuremap/parts.npy");
 #ifdef DEBUG_SHOW

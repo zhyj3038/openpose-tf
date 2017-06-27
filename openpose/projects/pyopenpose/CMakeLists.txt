@@ -29,5 +29,5 @@ pybind11_add_module(${PROJECT_NAME} ${SOURCE_LIST})
 add_definitions(-DPROJECT_NAME=${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PYMODULE_ROOT}")
 
-include_directories(${CMAKE_SOURCE_DIR}/libs/libopenpose)
-target_link_libraries(${PROJECT_NAME} libopenpose)
+include_directories(${CMAKE_SOURCE_DIR}/libs/openpose)
+target_link_libraries(${PROJECT_NAME} openpose)

@@ -1,0 +1,4 @@
+vgg_19/conv\d+/conv\d+_\d+/weights$	1
+vgg_19/conv\d+/conv\d+_\d+/biases$	2
+stages/conv\d+/weights$	1
+stages/conv\d+/biases$	2
