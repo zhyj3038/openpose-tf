@@ -36,10 +36,14 @@ def unet(config, net, limbs, parts, mask=None, stages=6, channels=128, num=2, sc
         branches = [('limbs', limbs), ('parts', parts)]
         
         image = tf.identity(net, 'image')
-        net = image
+        outputs = [image]
         for stage in range(stages):
             with tf.variable_scope('stage%d' % stage):
-                _input = tf.identity(net, 'input')
+                if len(outputs) == 1:
+                    _input = tf.identity(outputs[0], 'input')
+                else:
+                    assert len(outputs) == len(branches)
+                    _input = tf.concat(outputs + [image], -1, name='input')
                 outputs = []
                 for branch, label in branches:
                     net = _input
@@ -75,10 +79,7 @@ def unet(config, net, limbs, parts, mask=None, stages=6, channels=128, num=2, sc
                             with tf.name_scope('loss') as name:
                                 make_loss(config, net, mask, label, stage, branch, name)
                     outputs.append(net)
-                if stage < stages - 1:
-                    net = tf.concat(outputs + [image], -1, name='output')
-        limbs, parts = outputs
-        return tf.identity(limbs, 'limbs'), tf.identity(parts, 'parts')
+        return tuple([tf.identity(net, branch) for net, (branch, _) in zip(outputs, branches)])
 
 
 def unet64(config, net, limbs, parts, mask=None, stages=6, channels=64, num=2, scope='stages'):

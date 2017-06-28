@@ -159,7 +159,6 @@ def main():
 
 def make_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('model', help='model file')
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
     parser.add_argument('--alpha', type=float, default=0.5)
     parser.add_argument('-i', '--image')

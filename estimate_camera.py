@@ -33,12 +33,9 @@ import pyopenpose
 import utils.preprocess
 
 
-@pybenchmark.profile("eval")
+@pybenchmark.profile('dnn')
 def eval_tensor(sess, image, _image, tensors):
-    _image = _image.astype(np.float32)
-    _image = utils.preprocess.per_image_standardization(_image)
-    feed_dict = {image: np.expand_dims(_image, 0)}
-    _tensors = sess.run(tensors, feed_dict)
+    _tensors = sess.run(tensors, {image: np.expand_dims(_image, 0)})
     return tuple(map(operator.itemgetter(0), _tensors))
 
 
@@ -58,13 +55,12 @@ def main():
     min_count = config.getint('integration', 'min_count')
     cluster_min_score = config.getfloat('cluster', 'min_score')
     cluster_min_count = config.getint('cluster', 'min_count')
-    colors = itertools.cycle(matplotlib.colors.hex2color(prop['color']) for prop in plt.rcParams['axes.prop_cycle'])
+    colors = [tuple(map(lambda c: c * 255, matplotlib.colors.colorConverter.to_rgb(prop['color']))) for prop in plt.rcParams['axes.prop_cycle']]
     
-    @pybenchmark.profile("estimate")
     def _estimate(image, limbs, parts):
-        results = pyopenpose.estimate(limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, cluster_min_score, cluster_min_count)
+        results = pybenchmark.profile('estimate')(pyopenpose.estimate)(limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, cluster_min_score, cluster_min_count)
         scale_y, scale_x = utils.preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
-        for color, keypoints in zip(colors, results):
+        for color, keypoints in zip(itertools.cycle(colors), results):
             for (y1, x1), (y2, x2) in keypoints:
                 y1, x1 = int(y1 * scale_y), int(x1 * scale_x)
                 y2, x2 = int(y2 * scale_y), int(x2 * scale_x)
@@ -86,7 +82,7 @@ def main():
                 assert ret
                 image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
                 image_resized = utils.preprocess.resize(image_rgb, size_image)
-                _limbs, _parts = eval_tensor(sess, image, image_resized, [limbs, parts])
+                _limbs, _parts = eval_tensor(sess, image, utils.preprocess.per_image_standardization(image_resized.astype(np.float32)), [limbs, parts])
                 _estimate(image_bgr, _limbs, _parts)
                 cv2.imshow('estimation', image_bgr)
                 cv2.waitKey(1)
