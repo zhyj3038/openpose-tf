@@ -24,9 +24,10 @@ import numpy as np
 import matplotlib.patches as patches
 import tensorflow as tf
 from tensorflow.python.client import device_lib
+import pyopenpose
 
 
-class Mapper(object):
+class DatasetMapper(object):
     def __init__(self, size, mapper):
         self.size = size
         self.mapper = mapper
@@ -39,7 +40,7 @@ class Mapper(object):
         return result
 
 
-def get_mappers(config):
+def get_dataset_mappers(config):
     dataset = os.path.expanduser(os.path.expandvars(config.get('cache', 'dataset')))
     mappers = {}
     for filename in os.listdir(dataset):
@@ -51,7 +52,7 @@ def get_mappers(config):
             mappers[key] = mapper
     size = max(map(lambda mapper: max(map(lambda item: item[0], mapper)), mappers.values())) + 1
     for key in mappers:
-        mappers[key] = Mapper(size, mappers[key])
+        mappers[key] = DatasetMapper(size, mappers[key])
     return mappers, size
 
 
@@ -71,7 +72,9 @@ def get_logdir(config):
 
 def get_limbs_index(config):
     dataset = os.path.expanduser(os.path.expandvars(config.get('cache', 'dataset')))
-    return np.loadtxt(dataset + '.tsv', dtype=np.int, delimiter='\t')
+    limbs_index = np.loadtxt(dataset + '.tsv', dtype=np.int, delimiter='\t')
+    assert pyopenpose.limbs_points(limbs_index) == get_dataset_mappers(config)[1]
+    return limbs_index
 
 
 def parse_attr(s):

@@ -26,9 +26,7 @@ import utils
 def main():
     cachedir = utils.get_cachedir(config)
     os.makedirs(cachedir, exist_ok=True)
-    mappers, size = utils.get_mappers(config)
-    with open(cachedir + '.parts', 'w') as f:
-        f.write(str(size))
+    mappers, _ = utils.get_dataset_mappers(config)
     for profile in args.profile:
         path = os.path.join(cachedir, profile) + '.tfrecord'
         tf.logging.info('write tfrecords file: ' + path)

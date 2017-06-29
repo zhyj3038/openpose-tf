@@ -223,7 +223,6 @@ std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > cl
 					auto &cluster = *c;
 					auto &points = std::get<0>(cluster);
 					assert(points[limb_index.first] == p1);
-					assert(points[limb_index.second] == -1);
 					points[limb_index.second] = p2;
 					std::get<1>(cluster) += std::get<2>(connection) + std::get<2>(peak2);
 					std::get<2>(cluster) += 1;

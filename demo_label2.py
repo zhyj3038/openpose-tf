@@ -28,10 +28,8 @@ import utils.data
 
 def main():
     cachedir = utils.get_cachedir(config)
-    with open(cachedir + '.parts', 'r') as f:
-        num_parts = int(f.read())
+    _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
-    assert pyopenpose.limbs_points(limbs_index) == num_parts
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     size_label = utils.calc_backbone_size(config, size_image)
     tf.logging.info('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))

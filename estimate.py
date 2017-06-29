@@ -81,12 +81,9 @@ def eval_tensor(sess, image, _image, tensors):
 
 def main():
     matplotlib.rcParams.update({'font.size': args.fontsize})
-    cachedir = utils.get_cachedir(config)
     logdir = utils.get_logdir(config)
-    with open(cachedir + '.parts', 'r') as f:
-        num_parts = int(f.read())
+    _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
-    assert pyopenpose.limbs_points(limbs_index) == num_parts
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     with tf.Session() as sess:
         image = tf.placeholder(tf.float32, [1, size_image[0], size_image[1], 3], name='image')

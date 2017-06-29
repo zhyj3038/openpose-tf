@@ -40,12 +40,9 @@ def eval_tensor(sess, image, _image, tensors):
 
 
 def main():
-    cachedir = utils.get_cachedir(config)
     logdir = utils.get_logdir(config)
-    with open(cachedir + '.parts', 'r') as f:
-        num_parts = int(f.read())
+    _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
-    assert pyopenpose.limbs_points(limbs_index) == num_parts
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     
     threshold = config.getfloat('nms', 'threshold')
@@ -75,7 +72,7 @@ def main():
         model_path = tf.train.latest_checkpoint(logdir)
         tf.logging.info('load ' + model_path)
         slim.assign_from_checkpoint_fn(model_path, tf.global_variables())(sess)
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(args.camera)
         try:
             while True:
                 ret, image_bgr = cap.read()
@@ -101,6 +98,7 @@ def main():
 def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
+    parser.add_argument('--camera', type=int, default=0)
     parser.add_argument('-d', '--dump', help='dump directory')
     parser.add_argument('-f', '--format', default='%Y-%m-%d_%H-%M-%S.jpg', help='dump file name format')
     parser.add_argument('--level', default='info', help='logging level')

@@ -22,17 +22,14 @@ import multiprocessing
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
-import pyopenpose
 import utils.data
 import utils.visualize
 
 
 def main():
     cachedir = utils.get_cachedir(config)
-    with open(cachedir + '.parts', 'r') as f:
-        num_parts = int(f.read())
+    _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
-    assert pyopenpose.limbs_points(limbs_index) == num_parts
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     size_label = (size_image[0] // 8, size_image[1] // 8)
     tf.logging.info('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
