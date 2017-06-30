@@ -25,15 +25,14 @@ from . import tools
 
 
 def cache(path, writer, mapper, args, config):
-    name = __name__.split('.')[-1]
     cachedir = os.path.dirname(path)
-    profile = os.path.splitext(os.path.basename(path))[0]
-    profiledir = os.path.join(cachedir, profile)
-    os.makedirs(profiledir, exist_ok=True)
+    phase = os.path.splitext(os.path.basename(path))[0]
+    phasedir = os.path.join(cachedir, phase)
+    os.makedirs(phasedir, exist_ok=True)
     mask_ext = config.get('cache', 'mask_ext')
-    with open('config/cache/%s.txt' % name, 'r') as f:
+    with open(os.path.splitext(__file__)[0] + '.txt', 'r') as f:
         root = f.read().rstrip()
-    root = os.path.join(os.path.expanduser(os.path.expandvars(root)), profile)
+    root = os.path.join(os.path.expanduser(os.path.expandvars(root)), phase)
     path = os.path.join(root, 'joint_data.mat')
     if not os.path.exists(path):
         tf.logging.warn(path + ' not exists')
@@ -59,11 +58,11 @@ def cache(path, writer, mapper, args, config):
         keypoints = np.array(keypoints, dtype=np.int32)
         # mask
         filename = os.path.splitext(os.path.basename(imagepath))[0]
-        maskpath = os.path.join(profiledir, filename + '.mask' + mask_ext)
+        maskpath = os.path.join(phasedir, filename + '.mask' + mask_ext)
         mask = np.ones(shape=(height, width), dtype=np.uint8) * 255
         scipy.misc.imsave(os.path.join(cachedir, maskpath), mask)
         if args.dump:
-            np.save(os.path.join(profiledir, filename + '.npy'), keypoints)
+            np.save(os.path.join(phasedir, filename + '.npy'), keypoints)
         example = tf.train.Example(features=tf.train.Features(feature={
             'imagepath': tf.train.Feature(bytes_list=tf.train.BytesList(value=[tf.compat.as_bytes(imagepath)])),
             'maskpath': tf.train.Feature(bytes_list=tf.train.BytesList(value=[tf.compat.as_bytes(maskpath)])),

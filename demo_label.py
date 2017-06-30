@@ -74,7 +74,7 @@ def main():
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     size_label = utils.calc_backbone_size(config, size_image)
     tf.logging.info('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
-    paths = [os.path.join(cachedir, profile + '.tfrecord') for profile in args.profile]
+    paths = [os.path.join(cachedir, phase + '.tfrecord') for phase in args.phase]
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
     with tf.Session() as sess:
@@ -101,7 +101,7 @@ def main():
 def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
-    parser.add_argument('-p', '--profile', nargs='+', default=['train', 'val'])
+    parser.add_argument('-p', '--phase', nargs='+', default=['train', 'val'])
     parser.add_argument('--alpha', type=float, default=0.5)
     parser.add_argument('--level', default='info', help='logging level')
     return parser.parse_args()

@@ -27,22 +27,22 @@ def main():
     cachedir = utils.get_cachedir(config)
     os.makedirs(cachedir, exist_ok=True)
     mappers, _ = utils.get_dataset_mappers(config)
-    for profile in args.profile:
-        path = os.path.join(cachedir, profile) + '.tfrecord'
+    for phase in args.phase:
+        path = os.path.join(cachedir, phase) + '.tfrecord'
         tf.logging.info('write tfrecords file: ' + path)
         with tf.python_io.TFRecordWriter(path) as writer:
-            for key in mappers:
-                tf.logging.info('load %s data' % key)
-                module = importlib.import_module('cache.' + key)
+            for dataset in mappers:
+                tf.logging.info('load %s data' % dataset)
+                module = importlib.import_module('cache.' + dataset)
                 func = getattr(module, 'cache')
-                func(path, writer, mappers[key], args, config)
-    tf.logging.info('%s data are saved into %s' % (str(args.profile), cachedir))
+                func(path, writer, mappers[dataset], args, config)
+    tf.logging.info('%s data are saved into %s' % (str(args.phase), cachedir))
 
 
 def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
-    parser.add_argument('-p', '--profile', nargs='+', default=['train', 'val', 'test'])
+    parser.add_argument('-p', '--phase', nargs='+', default=['train', 'val', 'test'])
     parser.add_argument('-v', '--verify', action='store_true')
     parser.add_argument('-d', '--dump', action='store_true')
     parser.add_argument('--level', default='info', help='logging level')

@@ -47,15 +47,15 @@ def draw_mask(segmentation, canvas):
 def cache(path, writer, mapper, args, config):
     name = __name__.split('.')[-1]
     cachedir = os.path.dirname(path)
-    profile = os.path.splitext(os.path.basename(path))[0]
-    profiledir = os.path.join(cachedir, profile)
-    os.makedirs(profiledir, exist_ok=True)
+    phase = os.path.splitext(os.path.basename(path))[0]
+    phasedir = os.path.join(cachedir, phase)
+    os.makedirs(phasedir, exist_ok=True)
     mask_ext = config.get('cache', 'mask_ext')
-    for i, row in pd.read_csv('config/cache/%s.tsv' % name, sep='\t').iterrows():
+    for i, row in pd.read_csv(os.path.splitext(__file__)[0] + '.tsv', sep='\t').iterrows():
         tf.logging.info('loading data %d (%s)' % (i, ', '.join([k + '=' + str(v) for k, v in row.items()])))
         root = os.path.expanduser(os.path.expandvars(row['root']))
         year = str(row['year'])
-        suffix = profile + year
+        suffix = phase + year
         path = os.path.join(root, 'annotations', 'person_keypoints_%s.json' % suffix)
         if not os.path.exists(path):
             tf.logging.warn(path + ' not exists')
@@ -86,7 +86,7 @@ def cache(path, writer, mapper, args, config):
             anns = coco_kp.loadAnns(annIds)
             keypoints = []
             filename = os.path.splitext(os.path.basename(imagepath))[0]
-            maskpath = os.path.join(profiledir, filename + '.mask' + mask_ext)
+            maskpath = os.path.join(phasedir, filename + '.mask' + mask_ext)
             with Image.new('L', (width, height), 255) as canvas:
                 for ann in anns:
                     points = mapper(np.array(ann['keypoints']).reshape([-1, 3]))
@@ -100,7 +100,7 @@ def cache(path, writer, mapper, args, config):
                 canvas.save(os.path.join(cachedir, maskpath))
             keypoints = np.array(keypoints, dtype=np.int32)
             if args.dump:
-                np.save(os.path.join(profiledir, filename + '.npy'), keypoints)
+                np.save(os.path.join(phasedir, filename + '.npy'), keypoints)
             example = tf.train.Example(features=tf.train.Features(feature={
                 'imagepath': tf.train.Feature(bytes_list=tf.train.BytesList(value=[tf.compat.as_bytes(imagepath)])),
                 'maskpath': tf.train.Feature(bytes_list=tf.train.BytesList(value=[tf.compat.as_bytes(maskpath)])),

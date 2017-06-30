@@ -46,13 +46,13 @@ def get_dataset_mappers(config):
     for filename in os.listdir(dataset):
         path = os.path.join(dataset, filename)
         if os.path.isfile(path) and os.path.splitext(filename)[-1].lower() == '.tsv':
-            key = os.path.splitext(filename)[0]
+            dataset = os.path.splitext(filename)[0]
             with open(path, 'r') as f:
                 mapper = [(int(s), eval(func)) for s, func in csv.reader(f, delimiter='\t')]
-            mappers[key] = mapper
+            mappers[dataset] = mapper
     size = max(map(lambda mapper: max(map(lambda item: item[0], mapper)), mappers.values())) + 1
-    for key in mappers:
-        mappers[key] = DatasetMapper(size, mappers[key])
+    for dataset in mappers:
+        mappers[dataset] = DatasetMapper(size, mappers[dataset])
     return mappers, size
 
 

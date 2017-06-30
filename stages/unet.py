@@ -21,7 +21,7 @@ import tensorflow.contrib.slim as slim
 from stages import make_loss
 
 
-def unet(config, net, limbs, parts, mask=None, stages=6, channels=128, num=2, scope='stages'):
+def unet(config, net, limbs, parts, mask=None, stages=6, channels=128, sqz=128 // 3, num=2, scope='stages'):
     with tf.variable_scope(scope):
         if mask is None:
             assert isinstance(limbs, numbers.Integral)
@@ -63,11 +63,15 @@ def unet(config, net, limbs, parts, mask=None, stages=6, channels=128, num=2, sc
                                 index += 1
                                 for _ in range(num):
                                     net = slim.max_pool2d(net, scope='pool%d' % index)
+                                    if sqz > 0:
+                                        net = slim.layers.conv2d(net, kernel_size=[1, 1], scope='sqz%d' % index)
                                     net = slim.layers.conv2d(net, scope='conv%d' % index)
                                     index += 1
                                     nets.append(net)
                                 nets.pop()
                                 for _net in nets[::-1]:
+                                    if sqz > 0:
+                                        net = slim.layers.conv2d(net, kernel_size=[1, 1], scope='sqz%d' % index)
                                     with tf.name_scope('interp%d' % index):
                                         net = tf.image.resize_images(net, _net.get_shape()[1:3])
                                         net = tf.concat([net, _net], -1)
@@ -82,5 +86,9 @@ def unet(config, net, limbs, parts, mask=None, stages=6, channels=128, num=2, sc
         return tuple([tf.identity(net, branch) for net, (branch, _) in zip(outputs, branches)])
 
 
-def unet64(config, net, limbs, parts, mask=None, stages=6, channels=64, num=2, scope='stages'):
-    return unet(config, net, limbs, parts, mask, stages, channels, num, scope)
+def unet64(config, net, limbs, parts, mask=None, stages=6, channels=64, sqz=0, num=2, scope='stages'):
+    return unet(config, net, limbs, parts, mask, stages, channels, sqz, num, scope)
+
+
+def unet64_sqz3(config, net, limbs, parts, mask=None, stages=6, channels=64, sqz=64 // 3, num=2, scope='stages'):
+    return unet(config, net, limbs, parts, mask, stages, channels, sqz, num, scope)

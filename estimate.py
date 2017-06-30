@@ -25,6 +25,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import matplotlib
 import matplotlib.pyplot as plt
+import humanize
 import utils.preprocess
 import utils.visualize
 import pyopenpose
@@ -68,7 +69,7 @@ def estimate(config, image, limbs_index, limbs, parts):
 def read_image(path, size):
     image = utils.preprocess.read_image(path)
     image = np.array(np.uint8(image))
-    return image, utils.preprocess.resize(image, size)
+    return image, utils.preprocess.resize(image, size[0], size[1])
 
 
 def eval_tensor(sess, image, _image, tensors):
@@ -91,12 +92,13 @@ def main():
         limbs, parts = utils.parse_attr(config.get('stages', 'dnn'))(config, net, len(limbs_index), num_parts)
         limbs = tf.check_numerics(limbs, limbs.op.name)
         parts = tf.check_numerics(parts[:, :, :, :-1], parts.op.name) # drop background channel
+        tf.logging.info(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) for var in tf.global_variables())))
         model_path = tf.train.latest_checkpoint(logdir)
         tf.logging.info('load ' + model_path)
         slim.assign_from_checkpoint_fn(model_path, tf.global_variables())(sess)
         path = os.path.expanduser(os.path.expandvars(args.path))
         if os.path.isfile(path):
-            image_rgb, image_resized = read_image(path, size_image[::-1])
+            image_rgb, image_resized = read_image(path, size_image)
             _limbs, _parts = eval_tensor(sess, image, image_resized, [limbs, parts])
             estimate(config, image_rgb, limbs_index, _limbs, _parts)
             plt.show()
@@ -106,7 +108,7 @@ def main():
                     if os.path.splitext(filename)[-1].lower() in args.exts:
                         _path = os.path.join(dirpath, filename)
                         print(_path)
-                        image_rgb, image_resized = read_image(_path, size_image[::-1])
+                        image_rgb, image_resized = read_image(_path, size_image)
                         _limbs, _parts = eval_tensor(sess, image, image_resized, [limbs, parts])
                         estimate(config, image_rgb, limbs_index, _limbs, _parts)
                         plt.show()

@@ -28,6 +28,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import matplotlib.pyplot as plt
 import matplotlib.colors
+import humanize
 import cv2
 import pyopenpose
 import utils.preprocess
@@ -69,6 +70,7 @@ def main():
         limbs, parts = utils.parse_attr(config.get('stages', 'dnn'))(config, net, len(limbs_index), num_parts)
         limbs = tf.check_numerics(limbs, limbs.op.name)
         parts = tf.check_numerics(parts[:, :, :, :-1], parts.op.name) # drop background channel
+        tf.logging.info(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) for var in tf.global_variables())))
         model_path = tf.train.latest_checkpoint(logdir)
         tf.logging.info('load ' + model_path)
         slim.assign_from_checkpoint_fn(model_path, tf.global_variables())(sess)
@@ -78,7 +80,7 @@ def main():
                 ret, image_bgr = cap.read()
                 assert ret
                 image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-                image_resized = utils.preprocess.resize(image_rgb, size_image)
+                image_resized = utils.preprocess.resize(image_rgb, size_image[0], size_image[1])
                 _limbs, _parts = eval_tensor(sess, image, utils.preprocess.per_image_standardization(image_resized.astype(np.float32)), [limbs, parts])
                 _estimate(image_bgr, _limbs, _parts)
                 cv2.imshow('estimation', image_bgr)

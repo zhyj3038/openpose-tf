@@ -29,7 +29,7 @@ def main():
     cachedir = utils.get_cachedir(config)
     _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
-    paths = [os.path.join(cachedir, profile + '.tfrecord') for profile in args.profile]
+    paths = [os.path.join(cachedir, phase + '.tfrecord') for phase in args.phase]
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.info('num_examples=%d' % num_examples)
     for path in paths:
@@ -53,7 +53,7 @@ def main():
 def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
-    parser.add_argument('-p', '--profile', nargs='+', default=['train', 'val'])
+    parser.add_argument('-p', '--phase', nargs='+', default=['train', 'val'])
     parser.add_argument('--colors', nargs='+', default=['r', 'w'])
     parser.add_argument('--level', default='info', help='logging level')
     parser.add_argument('--alpha', type=float, default=0.5)

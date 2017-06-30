@@ -129,7 +129,7 @@ def main():
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
     size_label = utils.calc_backbone_size(config, size_image)
     tf.logging.warn('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
-    paths = [os.path.join(cachedir, profile + '.tfrecord') for profile in args.profile]
+    paths = [os.path.join(cachedir, phase + '.tfrecord') for phase in args.phase]
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
     with tf.name_scope('batch'):
@@ -193,7 +193,7 @@ def make_args():
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
     parser.add_argument('-t', '--transfer', help='transferring model from a .ckpt file')
     parser.add_argument('-e', '--exclude', nargs='+', help='exclude variables while transferring')
-    parser.add_argument('-p', '--profile', nargs='+', default=['train', 'val'])
+    parser.add_argument('-p', '--phase', nargs='+', default=['train', 'val'])
     parser.add_argument('-s', '--steps', type=int, default=None, help='max number of steps')
     parser.add_argument('-d', '--delete', action='store_true', help='delete logdir')
     parser.add_argument('-b', '--batch_size', default=8, type=int, help='batch size')

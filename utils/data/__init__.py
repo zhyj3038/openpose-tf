@@ -23,7 +23,7 @@ from . import augmentation
 __ops__ = tf.load_op_library('openpose_ops.so')
 
 
-def decode_image_labels(config, paths, num_parts):
+def decode_image_label(config, paths, num_parts):
     with tf.name_scope(inspect.stack()[0][3]):
         with tf.name_scope('parse_example'):
             reader = tf.TFRecordReader()
@@ -68,7 +68,7 @@ def data_augmentation(config, image, mask, keypoints, size_image, size_label):
 def load_data(config, paths, size_image, size_label, num_parts, limbs_index):
     section = inspect.stack()[0][3]
     with tf.name_scope(section):
-        image, mask, keypoints = decode_image_labels(config, paths, num_parts)
+        image, mask, keypoints = decode_image_label(config, paths, num_parts)
         scale = list(map(float, config.get('data_augmentation', 'scale').split()))
         rotate = config.getfloat('data_augmentation', 'rotate')
         fill = config.getint('data_augmentation', 'fill')

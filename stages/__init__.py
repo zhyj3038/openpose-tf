@@ -23,5 +23,5 @@ def make_loss(config, net, mask, label, stage, branch, name='loss'):
     assert mask.get_shape().as_list()[:3] == shape[:3]
     assert label.get_shape().as_list() == shape
     dist = tf.square(net - label)
-    loss = tf.reduce_sum(mask * dist, name=name)
+    loss = tf.reduce_mean(mask * dist, name=name)
     tf.add_to_collection(tf.GraphKeys.LOSSES, loss)

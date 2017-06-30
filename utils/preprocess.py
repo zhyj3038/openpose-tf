@@ -43,17 +43,16 @@ def read_image(path):
     return image
 
 
-def resize(image, size):
-    height, width, _ = image.shape
-    _width, _height = size
-    if height / width > _height / _width:
-        scale = _height / height
+def resize(image, height, width):
+    imageheight, imagewidth, _ = image.shape
+    if imageheight / imagewidth > height / width:
+        scale = height / imageheight
     else:
-        scale = _width / width
+        scale = width / imagewidth
     m = np.eye(2, 3)
     m[0, 0] = scale
     m[1, 1] = scale
-    return cv2.warpAffine(image, m, size, flags=cv2.INTER_CUBIC)
+    return cv2.warpAffine(image, m, (width, height), flags=cv2.INTER_CUBIC)
 
 
 def calc_image_scale(size, image_size):

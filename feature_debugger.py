@@ -47,7 +47,8 @@ class CameraThread(QtCore.QThread):
                 ret, image_bgr = cap.read()
                 assert ret
                 image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-                image_rgb = utils.preprocess.resize(image_rgb, self.debugger.size)
+                width, height = self.debugger.size
+                image_rgb = utils.preprocess.resize(image_rgb, height, width)
                 image = utils.preprocess.per_image_standardization(image_rgb)
                 tensor = self.debugger.get_current_tensor()
                 feature = self.debugger.sess.run(tensor, {self.debugger.image: np.expand_dims(image, 0)})[0]
