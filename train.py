@@ -142,18 +142,18 @@ def main():
         image, mask, limbs, parts = batch
         with tf.name_scope('output'):
             image, mask, limbs, parts = tf.identity(image, 'image'), tf.identity(mask, 'mask'), tf.identity(limbs, 'limbs'), tf.identity(parts, 'parts')
-    global_step = tf.contrib.framework.get_or_create_global_step()
     net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
     assert tuple(net.get_shape().as_list()[1:3]) == size_label
     utils.parse_attr(config.get('stages', 'dnn'))(config, net, limbs, parts, mask)
+    with tf.name_scope('total_loss') as name:
+        total_loss = tf.losses.get_total_loss(name=name)
+    global_step = tf.contrib.framework.get_or_create_global_step()
+    variables_to_restore = slim.get_variables_to_restore(exclude=args.exclude)
     try:
         gradient_multipliers = get_gradient_multipliers([config.get('backbone', 'gradient_multipliers'), config.get('stages', 'gradient_multipliers')], tf.trainable_variables())
     except configparser.NoOptionError:
         tf.logging.warn('gradient_multipliers disabled')
         gradient_multipliers = None
-    with tf.name_scope('total_loss') as name:
-        total_loss = tf.losses.get_total_loss(name=name)
-    variables_to_restore = slim.get_variables_to_restore(exclude=args.exclude)
     with tf.name_scope('optimizer'):
         try:
             decay_steps = config.getint('exponential_decay', 'decay_steps')

@@ -71,9 +71,9 @@ def main():
         limbs = tf.check_numerics(limbs, limbs.op.name)
         parts = tf.check_numerics(parts[:, :, :, :-1], parts.op.name) # drop background channel
         tf.logging.info(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) for var in tf.global_variables())))
-        model_path = tf.train.latest_checkpoint(logdir)
-        tf.logging.info('load ' + model_path)
-        slim.assign_from_checkpoint_fn(model_path, tf.global_variables())(sess)
+        checkpoint_path = tf.train.latest_checkpoint(logdir)
+        tf.logging.info('load ' + checkpoint_path)
+        slim.assign_from_checkpoint_fn(checkpoint_path, tf.global_variables())(sess)
         cap = cv2.VideoCapture(args.camera)
         try:
             while True:
