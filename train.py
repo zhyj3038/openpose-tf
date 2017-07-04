@@ -127,7 +127,7 @@ def main():
     _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
-    size_label = utils.calc_backbone_size(config, size_image)
+    size_label = utils.calc_downsampling_size(config.get('backbone', 'dnn'), size_image[0], size_image[1])
     tf.logging.warn('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
     paths = [os.path.join(cachedir, phase + '.tfrecord') for phase in args.phase]
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)

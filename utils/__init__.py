@@ -83,18 +83,9 @@ def parse_attr(s):
     return getattr(module, name)
 
 
-def get_backbone_downsampling(config):
-    module, name = config.get('backbone', 'dnn').rsplit('.', 1)
-    module = importlib.import_module(module)
-    return getattr(module, name.upper() + '_DOWNSAMPLING')
-
-
-def calc_backbone_size(config, size):
-    height, width = size
-    downsampling_width, downsampling_height = get_backbone_downsampling(config)
-    assert width % downsampling_width == 0
-    assert height % downsampling_height == 0
-    return width // downsampling_width, height // downsampling_height
+def calc_downsampling_size(dnn, height, width):
+    func = parse_attr(dnn + '_downsampling')
+    return func(height, width)
 
 
 def match_trainable_variables(pattern):

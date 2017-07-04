@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <utility>
 #include <limits>
 #include <algorithm>
+#include <type_traits>
 #include <exception>
 #include <boost/format.hpp>
 #include <boost/exception/all.hpp>
@@ -35,11 +36,10 @@ namespace openpose
 namespace data
 {
 template <typename _TTensor, int Options>
-cv::Rect_<typename _TTensor::Scalar> calc_keypoints_rect(Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index, const cv::Size &size)
+cv::Rect_<typename _TTensor::Scalar> calc_keypoints_rect(Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index, const cv::Size &size, typename std::enable_if<_TTensor::NumIndices == 3>::type* = nullptr)
 {
 	typedef Eigen::DenseIndex _TIndex;
-	typedef typename _TTensor::Scalar _TReal;
-	ASSERT_OPENPOSE(keypoints.rank() == 3);
+	typedef typename std::remove_const<typename _TTensor::Scalar>::type _TReal;
 	ASSERT_OPENPOSE(keypoints.dimension(2) == 3);
 	_TReal xmin = std::numeric_limits<_TReal>::max(), xmax = std::numeric_limits<_TReal>::min();
 	_TReal ymin = std::numeric_limits<_TReal>::max(), ymax = std::numeric_limits<_TReal>::min();
@@ -64,11 +64,10 @@ cv::Rect_<typename _TTensor::Scalar> calc_keypoints_rect(Eigen::TensorMap<_TTens
 }
 
 template <typename _TTensor, int Options>
-void rotate_points(const cv::Mat &rotate_mat, Eigen::TensorMap<_TTensor, Options> keypoints)
+void rotate_points(const cv::Mat &rotate_mat, Eigen::TensorMap<_TTensor, Options> keypoints, typename std::enable_if<_TTensor::NumIndices == 3>::type* = nullptr)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef double _TRotate;
-	ASSERT_OPENPOSE(keypoints.rank() == 3);
 	ASSERT_OPENPOSE(keypoints.dimension(2) == 3);
 	for (_TIndex i = 0; i < keypoints.dimension(0); ++i)
 		for (_TIndex j = 0; j < keypoints.dimension(1); ++j)
@@ -144,10 +143,9 @@ void update_bound_pos(_TRandom &random, const cv::Rect_<_TReal> &keypoints_rect,
 }
 
 template <typename _TTensor, int Options>
-void move_scale_keypoints(const cv::Rect_<typename _TTensor::Scalar> &bound, const cv::Size &dsize, Eigen::TensorMap<_TTensor, Options> keypoints)
+void move_scale_keypoints(const cv::Rect_<typename _TTensor::Scalar> &bound, const cv::Size &dsize, Eigen::TensorMap<_TTensor, Options> keypoints, typename std::enable_if<_TTensor::NumIndices == 3>::type* = nullptr)
 {
 	typedef Eigen::DenseIndex _TIndex;
-	ASSERT_OPENPOSE(keypoints.rank() == 3);
 	ASSERT_OPENPOSE(keypoints.dimension(2) == 3);
 	for (_TIndex i = 0; i < keypoints.dimension(0); ++i)
 		for (_TIndex j = 0; j < keypoints.dimension(1); ++j)

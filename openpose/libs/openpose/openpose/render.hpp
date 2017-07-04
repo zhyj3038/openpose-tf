@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cassert>
 #include <tuple>
+#include <cmath>
 #include <type_traits>
 #include <boost/format.hpp>
 #include <Eigen/Core>
@@ -27,10 +28,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace openpose
 {
 template <typename _TPixel, int cn, typename _TTensor, int Options>
-void draw_keypoints(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index)
+void draw_keypoints(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, Options> keypoints, const Eigen::DenseIndex index = -1, typename std::enable_if<_TTensor::NumIndices == 3>::type* = nullptr)
 {
 	typedef Eigen::DenseIndex _TIndex;
-	assert(keypoints.rank() == 3);
 	for (_TIndex i = 0; i < keypoints.dimension(0); ++i)
 	{
 		for (_TIndex j = 0; j < keypoints.dimension(1); ++j)
@@ -43,6 +43,66 @@ void draw_keypoints(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTen
 				cv::circle(mat, org, 3, color, -1);
 			}
 	}
+}
+
+template <typename _TPixel, int cn, typename _TTensor, int Options>
+void draw_grid(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, Options> bbox, typename std::enable_if<_TTensor::NumIndices == 3>::type* = nullptr)
+{
+	typedef Eigen::DenseIndex _TIndex;
+	typedef typename _TTensor::Scalar _T;
+
+	assert(bbox.dimension(2) == 4);
+	const _T bbox_height = (_T)mat.rows / bbox.dimension(0), bbox_width = (_T)mat.cols / bbox.dimension(1);
+	for (_TIndex i = 0; i < bbox.dimension(0); ++i)
+	{
+		const _T y = i * bbox_height;
+		cv::line(mat, cv::Point(0, y), cv::Point(mat.cols - 1, y), CV_RGB(255,255,255));
+	}
+	for (_TIndex j = 0; j < bbox.dimension(1); ++j)
+	{
+		const _T x = j * bbox_width;
+		cv::line(mat, cv::Point(x, 0), cv::Point(x, mat.rows - 1), CV_RGB(255,255,255));
+	}
+}
+
+template <typename _TPixel, int cn, typename _TTensor, int Options>
+void draw_bbox(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, Options> bbox, typename std::enable_if<_TTensor::NumIndices == 3>::type* = nullptr)
+{
+	typedef Eigen::DenseIndex _TIndex;
+	typedef typename _TTensor::Scalar _T;
+	static const std::vector<cv::Scalar> colors = {
+		CV_RGB(255, 0, 0),
+		CV_RGB(0, 255, 0),
+		CV_RGB(0, 0, 255),
+		CV_RGB(0, 255, 255),
+		CV_RGB(255, 0, 255),
+		CV_RGB(255, 255, 0),
+		CV_RGB(127, 0, 0),
+		CV_RGB(0, 127, 0),
+		CV_RGB(0, 0, 127),
+		CV_RGB(0, 127, 127),
+		CV_RGB(127, 0, 127),
+		CV_RGB(127, 127, 0)
+	};
+
+	assert(bbox.dimension(2) == 4);
+	const _T bbox_height = mat.rows / bbox.dimension(0), bbox_width = mat.cols / bbox.dimension(1);
+	cv::Mat_<cv::Vec<_TPixel, cn> > mat_grid = mat.clone();
+	for (_TIndex i = 0; i < bbox.dimension(0); ++i)
+		for (_TIndex j = 0; j < bbox.dimension(1); ++j)
+		{
+			const auto &color = colors[(i * bbox.dimension(1) + j) % colors.size()];
+			if (bbox(i, j, 2) > 0 && bbox(i, j, 3) > 0)
+			{
+				const _T bbox_y = i * bbox_height, bbox_x = j * bbox_width;
+				cv::rectangle(mat_grid, cv::Point(bbox_x, bbox_y), cv::Point(bbox_x + bbox_width, bbox_y + bbox_height), color, -1);
+				const _T y = bbox_y + bbox(i, j, 1), x = bbox_x + bbox(i, j, 0);
+				cv::rectangle(mat, cv::Point(x, y), cv::Point(x + bbox(i, j, 2), y + bbox(i, j, 3)), color);
+			}
+			else
+				assert(bbox(i, j, 0) == 0 && bbox(i, j, 1) == 0 && bbox(i, j, 2) == 0 && bbox(i, j, 3) == 0);
+		}
+	cv::addWeighted(mat, 0.7, mat_grid, 0.3, 0, mat);
 }
 
 template <typename _TPixel, int cn>
@@ -69,6 +129,16 @@ cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &im
 {
 	auto canvas = render(image, mask);
 	draw_keypoints(canvas, keypoints, index);
+	return canvas;
+}
+
+template <typename _TPixel, int cn, typename _TTensor, int Options>
+cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &image, const cv::Mat_<_TPixel> &mask, Eigen::TensorMap<_TTensor, Options> keypoints, Eigen::TensorMap<_TTensor, Options> bbox)
+{
+	auto canvas = render(image, mask);
+	draw_keypoints(canvas, keypoints);
+	draw_grid(canvas, bbox);
+	draw_bbox(canvas, bbox);
 	return canvas;
 }
 

@@ -91,6 +91,7 @@ def cache(path, writer, mapper, args, config):
                 for ann in anns:
                     points = mapper(np.array(ann['keypoints']).reshape([-1, 3]))
                     if np.any(points[:, 2] > 0):
+                    # if np.sum(points[:, 2] > 0) > 1:
                         keypoints.append(points)
                     else:
                         draw_mask(ann['segmentation'], canvas)

@@ -19,29 +19,42 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <list>
 #include <type_traits>
-#include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/exception/all.hpp>
 
 namespace openpose
 {
+template <typename _TTensor, int Options>
+void save_tsv(Eigen::TensorMap<_TTensor, Options> tensor, const std::string &path, const std::string &delimiter = "\t", typename std::enable_if<_TTensor::NumIndices == 2>::type* = nullptr)
+{
+	std::ofstream fs(path.c_str());
+	typedef Eigen::DenseIndex _TIndex;
+	assert(tensor.dimension(1) > 0);
+	for (_TIndex i = 0; i < tensor.dimension(0); ++i)
+	{
+		fs << tensor(i, 0);
+		for (_TIndex j = 1; j < tensor.dimension(1); ++j)
+			fs << delimiter << tensor(i, j);
+		fs << std::endl;
+	}
+	fs.close();
+}
+
 template <typename _TTensor>
-_TTensor load_tsv_tensor(const std::string &path, const char delimiter = '\t', typename std::enable_if<_TTensor::NumIndices == 2>::type* = nullptr)
+_TTensor load_tsv_tensor(const std::string &path, const std::string &delimiter = "\t", typename std::enable_if<_TTensor::NumIndices == 2>::type* = nullptr)
 {
 	typedef typename _TTensor::Scalar _TScalar;
 	typedef typename _TTensor::Index _TIndex;
 	typedef std::vector<_TScalar> _TRow;
-	typedef boost::char_delimiters_separator<char> _TSeparator;
-	typedef boost::tokenizer<_TSeparator> _TTokenizer;
 
 	std::list<_TRow> data;
 	std::ifstream fs(path.c_str());
 	std::string line;
-	_TSeparator sep(delimiter);
 	while (getline(fs, line))
 	{
-		_TTokenizer tok(line, sep);
-		const std::vector<std::string> _row(tok.begin(), tok.end());
+		std::vector<std::string> _row;
+		boost::split(_row, line, boost::is_any_of(delimiter));
 		_TRow row(_row.size());
 		for (size_t i = 0; i < _row.size(); ++i)
 			row[i] = boost::lexical_cast<_TScalar>(_row[i]);
@@ -61,20 +74,17 @@ _TTensor load_tsv_tensor(const std::string &path, const char delimiter = '\t', t
 }
 
 template <typename _T>
-std::list<std::pair<_T, _T> > load_tsv_paired(const std::string &path, const char delimiter = '\t')
+std::list<std::pair<_T, _T> > load_tsv_paired(const std::string &path, const std::string &delimiter = "\t")
 {
 	typedef std::pair<_T, _T> _TRow;
-	typedef boost::char_delimiters_separator<char> _TSeparator;
-	typedef boost::tokenizer<_TSeparator> _TTokenizer;
 
 	std::list<_TRow> data;
 	std::ifstream fs(path.c_str());
 	std::string line;
-	_TSeparator sep(delimiter);
 	while (getline(fs, line))
 	{
-		_TTokenizer tok(line, sep);
-		const std::vector<std::string> _row(tok.begin(), tok.end());
+		std::vector<std::string> _row;
+		boost::split(_row, line, boost::is_any_of(delimiter));
 		if (_row.size() != 2)
 			BOOST_THROW_EXCEPTION(std::runtime_error(line));
 		data.push_back(std::make_pair(boost::lexical_cast<_T>(_row[0]), boost::lexical_cast<_T>(_row[1])));

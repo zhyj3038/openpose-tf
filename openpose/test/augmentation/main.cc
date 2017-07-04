@@ -29,11 +29,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <opencv2/highgui.hpp>
 #include <opencv2/core/eigen.hpp>
 #include <openpose/data/augmentation.hpp>
+#include <openpose/data/bbox.hpp>
 #include <openpose/npy.hpp>
+#include <openpose/tsv.hpp>
 #include <openpose/render.hpp>
 
 template <typename _TPixel, typename _TReal, typename _TRandom>
-void test(_TRandom &random, const std::string &path_image, const std::string &path_mask, const std::string &path_keypoints, const size_t height, const size_t width, const std::pair<size_t, size_t> downsample, const _TReal scale, const _TReal rotate, const _TPixel fill, Eigen::DenseIndex index = -1)
+void test(_TRandom &random, const std::string &path_image, const std::string &path_mask, const std::string &path_keypoints, const size_t height, const size_t width, const std::pair<size_t, size_t> downsample, const size_t bbox_height, const size_t bbox_width, const _TReal scale, const _TReal rotate, const _TReal scale_bbox, const _TPixel fill, Eigen::DenseIndex index = -1)
 {
 	typedef Eigen::Tensor<_TPixel, 3, Eigen::RowMajor, Eigen::DenseIndex> _TTensorPixel;
 	typedef Eigen::Tensor<_TReal, 3, Eigen::RowMajor, Eigen::DenseIndex> _TTensorReal;
@@ -49,6 +51,7 @@ void test(_TRandom &random, const std::string &path_image, const std::string &pa
 	_TTensorPixel _image_result(height, width, _image.dimension(2));
 	_TTensorPixel _mask_result(height / downsample.first, width / downsample.second, _mask.dimension(2));
 	_TTensorReal _keypoints_result(_keypoints.dimensions());
+	_TTensorReal _bbox(bbox_height, bbox_width, 4);
 	if (index != -1)
 	{
 		assert(0 <= index && index < _keypoints.dimension(0));
@@ -74,6 +77,7 @@ void test(_TRandom &random, const std::string &path_image, const std::string &pa
 			typename tensorflow::TTypes<_TReal, 3>::Tensor(_keypoints_result.data(), _keypoints_result.dimensions()),
 			fill
 		);
+	openpose::data::keypoints_bbox(height, width, scale_bbox, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints_result.data(), _keypoints_result.dimensions()), typename tensorflow::TTypes<_TReal, 3>::Tensor(_bbox.data(), _bbox.dimensions()));
 	{
 		const cv::Mat canvas = openpose::render(image, mask,
 			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints.data(), _keypoints.dimensions()));
@@ -83,9 +87,16 @@ void test(_TRandom &random, const std::string &path_image, const std::string &pa
 		const cv::Mat canvas = openpose::render(
 			openpose::tensor_mat<_TPixel, 3>(typename tensorflow::TTypes<_TPixel, 3>::ConstTensor(_image_result.data(), _image_result.dimensions())),
 			openpose::tensor_mat<_TPixel>(typename tensorflow::TTypes<_TPixel, 3>::ConstTensor(_mask_result.data(), _mask_result.dimensions())),
+			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints_result.data(), _keypoints_result.dimensions()), index);
+		cv::imshow("keypoints", canvas);
+	}
+	{
+		const cv::Mat canvas = openpose::render(
+			openpose::tensor_mat<_TPixel, 3>(typename tensorflow::TTypes<_TPixel, 3>::ConstTensor(_image_result.data(), _image_result.dimensions())),
+			openpose::tensor_mat<_TPixel>(typename tensorflow::TTypes<_TPixel, 3>::ConstTensor(_mask_result.data(), _mask_result.dimensions())),
 			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints_result.data(), _keypoints_result.dimensions()),
-			index);
-		cv::imshow("result", canvas);
+			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_bbox.data(), _bbox.dimensions()));
+		cv::imshow("bbox", canvas);
 	}
 	cv::waitKey(0);
 	cv::destroyAllWindows();
@@ -104,37 +115,39 @@ int main(void)
 	_TRandom random;
 #endif
 	const std::pair<size_t, size_t> downsample = std::make_pair(8, 8);
+	const size_t bbox_height = 7, bbox_width = 7;
+	const _TReal scale_bbox = 1.5;
+	{
+		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_train2014_000000000077";
+		const _TReal scale = std::uniform_real_distribution<_TReal>(1, 1.5)(random);
+		const _TReal rotate = std::uniform_real_distribution<_TReal>(-40, 40)(random);
+		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
+			368, 368, downsample, bbox_height, bbox_width, (_TReal)1000, rotate, scale_bbox, 0);
+		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
+			184, 368, downsample, bbox_height, bbox_width, scale, rotate, scale_bbox, 255);
+		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
+			368, 184, downsample, bbox_height, bbox_width, (_TReal)1000, rotate, scale_bbox, 255);
+	}
 	{
 		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_val2014_000000000136";
 		const _TReal scale = 1.4529;
 		const _TReal rotate = 26.8007;
 		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
-			368, 368, downsample, scale, rotate, 0, 1);
+			368, 368, downsample, bbox_height, bbox_width, scale, rotate, scale_bbox, 0, 1);
 	}
 	{
 		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_val2014_000000000241";
 		const _TReal scale = 1.99419;
 		const _TReal rotate = -3.95667;
 		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
-			368, 368, downsample, scale, rotate, 255, 0);
+			368, 368, downsample, bbox_height, bbox_width, scale, rotate, scale_bbox, 255, 0);
 	}
 	{
 		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_train2014_000000000036";
 		const _TReal scale = 1.38945;
 		const _TReal rotate = -2.13689;
 		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
-			368, 368, downsample, scale, rotate, 255);
-	}
-	{
-		const std::string prefix = std::string(DUMP_DIR) + "/data/COCO_train2014_000000000077";
-		const _TReal scale = std::uniform_real_distribution<_TReal>(1, 1.5)(random);
-		const _TReal rotate = std::uniform_real_distribution<_TReal>(-40, 40)(random);
-		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
-			184, 368, downsample, scale, rotate, 255);
-		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
-			368, 184, downsample, (_TReal)1000, rotate, 255);
-		test<_TPixel>(random, prefix + IMAGE_EXT, prefix + MASK_SUFFIX, prefix + ".npy",
-			368, 368, downsample, (_TReal)1000, rotate, 0);
+			368, 368, downsample, bbox_height, bbox_width, scale, rotate, scale_bbox, 255);
 	}
 	return 0;
 }

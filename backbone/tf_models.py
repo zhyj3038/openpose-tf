@@ -37,4 +37,6 @@ def vgg19_10(config, inputs, train=False):
             net = slim.layers.conv2d(net, 128, scope='conv%d' % index)
     return net
 
-VGG19_10_DOWNSAMPLING = (2 ** 3, 2 ** 3)
+
+def vgg19_10_downsampling(height, width):
+    return height // 2 ** 3, width // 2 ** 3

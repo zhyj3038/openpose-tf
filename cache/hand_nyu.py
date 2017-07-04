@@ -54,7 +54,10 @@ def cache(path, writer, mapper, args, config):
         width, height = tools.image_size(imagepath)
         # keypoints
         keypoints = joint_uvd[image_index, kinect_index, :, :]
-        keypoints[:, 2] = 1
+        keypoints[:, 2] = np.logical_and(np.logical_and(0 <= keypoints[:, 0], keypoints[:, 0] < width), np.logical_and(0 <= keypoints[:, 1], keypoints[:, 1] < height))
+        if np.sum(keypoints[:, 2] > 0) < 1:
+            cnt_noobj += 1
+            continue
         keypoints = np.array(keypoints, dtype=np.int32)
         # mask
         filename = os.path.splitext(os.path.basename(imagepath))[0]
