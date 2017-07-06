@@ -27,9 +27,11 @@ REGISTER_OP("Bbox")
 	.Input("size_image: TInteger")
 	.Input("size_bbox: TInteger")
 	.Input("scale: TReal")
-	.Output("bbox: TReal")
+	.Output("xy_offset: TReal")
+	.Output("width_height: TReal")
 	.SetShapeFn([](tensorflow::shape_inference::InferenceContext *c) {
-		set_shape(c, 0, 2, {4});
+		set_shape(c, 0, 2, {2});
+		set_shape(c, 1, 2, {2});
 		return tensorflow::Status::OK();
 	})
 ;

@@ -51,7 +51,8 @@ void test(_TRandom &random, const std::string &path_image, const std::string &pa
 	_TTensorPixel _image_result(height, width, _image.dimension(2));
 	_TTensorPixel _mask_result(height / downsample.first, width / downsample.second, _mask.dimension(2));
 	_TTensorReal _keypoints_result(_keypoints.dimensions());
-	_TTensorReal _bbox(bbox_height, bbox_width, 4);
+	_TTensorReal _xy_offset(bbox_height, bbox_width, 2);
+	_TTensorReal _width_height(bbox_height, bbox_width, 2);
 	if (index != -1)
 	{
 		assert(0 <= index && index < _keypoints.dimension(0));
@@ -77,7 +78,7 @@ void test(_TRandom &random, const std::string &path_image, const std::string &pa
 			typename tensorflow::TTypes<_TReal, 3>::Tensor(_keypoints_result.data(), _keypoints_result.dimensions()),
 			fill
 		);
-	openpose::data::keypoints_bbox(height, width, scale_bbox, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints_result.data(), _keypoints_result.dimensions()), typename tensorflow::TTypes<_TReal, 3>::Tensor(_bbox.data(), _bbox.dimensions()));
+	openpose::data::keypoints_bbox(height, width, scale_bbox, typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints_result.data(), _keypoints_result.dimensions()), typename tensorflow::TTypes<_TReal, 3>::Tensor(_xy_offset.data(), _xy_offset.dimensions()), typename tensorflow::TTypes<_TReal, 3>::Tensor(_width_height.data(), _width_height.dimensions()));
 	{
 		const cv::Mat canvas = openpose::render(image, mask,
 			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints.data(), _keypoints.dimensions()));
@@ -95,7 +96,8 @@ void test(_TRandom &random, const std::string &path_image, const std::string &pa
 			openpose::tensor_mat<_TPixel, 3>(typename tensorflow::TTypes<_TPixel, 3>::ConstTensor(_image_result.data(), _image_result.dimensions())),
 			openpose::tensor_mat<_TPixel>(typename tensorflow::TTypes<_TPixel, 3>::ConstTensor(_mask_result.data(), _mask_result.dimensions())),
 			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_keypoints_result.data(), _keypoints_result.dimensions()),
-			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_bbox.data(), _bbox.dimensions()));
+			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_xy_offset.data(), _xy_offset.dimensions()),
+			typename tensorflow::TTypes<_TReal, 3>::ConstTensor(_width_height.data(), _width_height.dimensions()));
 		cv::imshow("bbox", canvas);
 	}
 	cv::waitKey(0);

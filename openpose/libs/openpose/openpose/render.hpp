@@ -51,7 +51,7 @@ void draw_grid(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, 
 	typedef Eigen::DenseIndex _TIndex;
 	typedef typename _TTensor::Scalar _T;
 
-	assert(bbox.dimension(2) == 4);
+	assert(bbox.dimension(2) == 2);
 	const _T bbox_height = (_T)mat.rows / bbox.dimension(0), bbox_width = (_T)mat.cols / bbox.dimension(1);
 	for (_TIndex i = 0; i < bbox.dimension(0); ++i)
 	{
@@ -66,7 +66,7 @@ void draw_grid(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, 
 }
 
 template <typename _TPixel, int cn, typename _TTensor, int Options>
-void draw_bbox(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, Options> bbox, typename std::enable_if<_TTensor::NumIndices == 3>::type* = nullptr)
+void draw_bbox(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, Options> xy_offset, Eigen::TensorMap<_TTensor, Options> width_height, typename std::enable_if<_TTensor::NumIndices == 3>::type* = nullptr)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef typename _TTensor::Scalar _T;
@@ -85,22 +85,26 @@ void draw_bbox(cv::Mat_<cv::Vec<_TPixel, cn> > &mat, Eigen::TensorMap<_TTensor, 
 		CV_RGB(127, 127, 0)
 	};
 
-	assert(bbox.dimension(2) == 4);
-	const _T bbox_height = mat.rows / bbox.dimension(0), bbox_width = mat.cols / bbox.dimension(1);
+	ASSERT_OPENPOSE(xy_offset.dimension(0) == width_height.dimension(0) && xy_offset.dimension(1) == width_height.dimension(1));
+	assert(xy_offset.dimension(2) == 2);
+	assert(width_height.dimension(2) == 2);
+	const _T bbox_height = mat.rows / width_height.dimension(0), bbox_width = mat.cols / width_height.dimension(1);
 	cv::Mat_<cv::Vec<_TPixel, cn> > mat_grid = mat.clone();
-	for (_TIndex i = 0; i < bbox.dimension(0); ++i)
-		for (_TIndex j = 0; j < bbox.dimension(1); ++j)
+	for (_TIndex i = 0; i < width_height.dimension(0); ++i)
+		for (_TIndex j = 0; j < width_height.dimension(1); ++j)
 		{
-			const auto &color = colors[(i * bbox.dimension(1) + j) % colors.size()];
-			if (bbox(i, j, 2) > 0 && bbox(i, j, 3) > 0)
+			const auto &color = colors[(i * width_height.dimension(1) + j) % colors.size()];
+			if (width_height(i, j, 0) > 0 && width_height(i, j, 1) > 0)
 			{
 				const _T bbox_y = i * bbox_height, bbox_x = j * bbox_width;
 				cv::rectangle(mat_grid, cv::Point(bbox_x, bbox_y), cv::Point(bbox_x + bbox_width, bbox_y + bbox_height), color, -1);
-				const _T y = bbox_y + bbox(i, j, 1), x = bbox_x + bbox(i, j, 0);
-				cv::rectangle(mat, cv::Point(x, y), cv::Point(x + bbox(i, j, 2), y + bbox(i, j, 3)), color);
+				const _T y = bbox_y + xy_offset(i, j, 1), x = bbox_x + xy_offset(i, j, 0);
+				cv::rectangle(mat, cv::Point(x - 3, y - 3), cv::Point(x + 3, y + 3), color, CV_FILLED);
+				const _T width2 = width_height(i, j, 0) / 2, height2 = width_height(i, j, 1) / 2;
+				cv::rectangle(mat, cv::Point(x - width2, y - height2), cv::Point(x + width2, y + height2), color);
 			}
 			else
-				assert(bbox(i, j, 0) == 0 && bbox(i, j, 1) == 0 && bbox(i, j, 2) == 0 && bbox(i, j, 3) == 0);
+				assert(width_height(i, j, 0) == 0 && width_height(i, j, 1) == 0);
 		}
 	cv::addWeighted(mat, 0.7, mat_grid, 0.3, 0, mat);
 }
@@ -133,12 +137,12 @@ cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &im
 }
 
 template <typename _TPixel, int cn, typename _TTensor, int Options>
-cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &image, const cv::Mat_<_TPixel> &mask, Eigen::TensorMap<_TTensor, Options> keypoints, Eigen::TensorMap<_TTensor, Options> bbox)
+cv::Mat_<cv::Vec<_TPixel, cn> > render(const cv::Mat_<cv::Vec<_TPixel, cn> > &image, const cv::Mat_<_TPixel> &mask, Eigen::TensorMap<_TTensor, Options> keypoints, Eigen::TensorMap<_TTensor, Options> xy_offset, Eigen::TensorMap<_TTensor, Options> width_height)
 {
 	auto canvas = render(image, mask);
 	draw_keypoints(canvas, keypoints);
-	draw_grid(canvas, bbox);
-	draw_bbox(canvas, bbox);
+	draw_grid(canvas, width_height);
+	draw_bbox(canvas, xy_offset, width_height);
 	return canvas;
 }
 

@@ -45,8 +45,10 @@ void BboxOp<_TReal, _TInteger>::Compute(tensorflow::OpKernelContext *context)
 	const auto size_bbox = context->input(2).vec<TInteger>();
 	const TReal scale = context->input(3).scalar<TReal>()(0);
 
-	tensorflow::Tensor *bbox = NULL;
-	OP_REQUIRES_OK(context, context->allocate_output(0, tensorflow::TensorShape({size_bbox(0), size_bbox(1), 4}), &bbox));
+	tensorflow::Tensor *xy_offset = NULL;
+	OP_REQUIRES_OK(context, context->allocate_output(0, tensorflow::TensorShape({size_bbox(0), size_bbox(1), 2}), &xy_offset));
+	tensorflow::Tensor *width_height = NULL;
+	OP_REQUIRES_OK(context, context->allocate_output(1, tensorflow::TensorShape({size_bbox(0), size_bbox(1), 2}), &width_height));
 
-	openpose::data::keypoints_bbox(size_image(0), size_image(1), scale, keypoints.tensor<TReal, 3>(), bbox->tensor<TReal, 3>());
+	openpose::data::keypoints_bbox(size_image(0), size_image(1), scale, keypoints.tensor<TReal, 3>(), xy_offset->tensor<TReal, 3>(), width_height->tensor<TReal, 3>());
 }
