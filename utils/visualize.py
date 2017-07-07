@@ -50,12 +50,14 @@ def draw_peaks(ax, scale_y, scale_x, peaks, text, color='w', alpha=0.5):
         ax.text(x, y, text, bbox=dict(facecolor=color, alpha=alpha), ha='center', va='center')
 
 
-def draw_results(ax, scale_y, scale_x, results):
-    for color, keypoints in zip(itertools.cycle(prop['color'] for prop in plt.rcParams['axes.prop_cycle']), results):
-        for (y1, x1), (y2, x2) in keypoints:
+def draw_estimation(ax, scale_y, scale_x, clusters):
+    for color, cluster in zip(itertools.cycle(prop['color'] for prop in plt.rcParams['axes.prop_cycle']), clusters):
+        for (i1, y1, x1), (i2, y2, x2) in cluster:
             y1, x1 = y1 * scale_y, x1 * scale_x
             y2, x2 = y2 * scale_y, x2 * scale_x
             ax.plot([x1, x2], [y1, y2], color=color)
+            ax.text(x1, y1, str(i1))
+            ax.text(x2, y2, str(i2))
 
 
 def show_nms(image, parts, threshold, limits, alpha=0.5):

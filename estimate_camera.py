@@ -55,14 +55,17 @@ def main():
     cluster_min_count = config.getint('cluster', 'min_count')
     colors = [tuple(map(lambda c: c * 255, matplotlib.colors.colorConverter.to_rgb(prop['color']))) for prop in plt.rcParams['axes.prop_cycle']]
     
-    def _estimate(image, limbs, parts):
-        results = pybenchmark.profile('estimate')(pyopenpose.estimate)(limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, cluster_min_score, cluster_min_count)
+    def _estimate(image, limbs, parts, font=cv2.FONT_HERSHEY_SIMPLEX):
+        clusters = pybenchmark.profile('estimate')(pyopenpose.estimate)(limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, cluster_min_score, cluster_min_count)
         scale_y, scale_x = utils.preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
-        for color, keypoints in zip(itertools.cycle(colors), results):
-            for (y1, x1), (y2, x2) in keypoints:
+        for color, cluster in zip(itertools.cycle(colors), clusters):
+            for (i1, y1, x1), (i2, y2, x2) in cluster:
                 y1, x1 = int(y1 * scale_y), int(x1 * scale_x)
                 y2, x2 = int(y2 * scale_y), int(x2 * scale_x)
                 cv2.line(image, (x1, y1), (x2, y2), color, 3)
+                if args.part:
+                    cv2.putText(image, str(i1), (x1, y1), font, 1, (255,255,255), 2)
+                    cv2.putText(image, str(i2), (x2, y2), font, 1, (255,255,255), 2)
     
     with tf.Session() as sess:
         image = tf.placeholder(tf.float32, [1, size_image[0], size_image[1], 3], name='image')
@@ -102,6 +105,7 @@ def make_args():
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
     parser.add_argument('--camera', type=int, default=0)
     parser.add_argument('-d', '--dump', help='dump directory')
+    parser.add_argument('-p', '--part', action='store_true', help='show part numbers')
     parser.add_argument('-f', '--format', default='%Y-%m-%d_%H-%M-%S.jpg', help='dump file name format')
     parser.add_argument('--level', default='info', help='logging level')
     return parser.parse_args()

@@ -257,10 +257,10 @@ std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > cl
 }
 
 template <typename _T>
-std::list<std::list<std::pair<std::pair<_T, _T>, std::pair<_T, _T> > > > filter_cluster(const std::vector<std::pair<Eigen::DenseIndex, Eigen::DenseIndex> > &limbs_index, const std::vector<std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > > &peaks, const std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > &clusters, const _T min_score, const size_t min_count)
+std::list<std::list<std::pair<std::tuple<Eigen::DenseIndex, _T, _T>, std::tuple<Eigen::DenseIndex, _T, _T> > > > filter_cluster(const std::vector<std::pair<Eigen::DenseIndex, Eigen::DenseIndex> > &limbs_index, const std::vector<std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > > &peaks, const std::list<std::tuple<std::vector<Eigen::DenseIndex>, _T, Eigen::DenseIndex> > &clusters, const _T min_score, const size_t min_count)
 {
 	typedef Eigen::DenseIndex _TIndex;
-	typedef std::pair<_T, _T> _TPoint;
+	typedef std::tuple<_TIndex, _T, _T> _TPoint;
 	typedef std::pair<_TPoint, _TPoint> _TEdge;
 	typedef std::list<_TEdge> _TKeypoints;
 	std::list<_TKeypoints> results;
@@ -282,7 +282,7 @@ std::list<std::list<std::pair<std::pair<_T, _T>, std::pair<_T, _T> > > > filter_
 				{
 					const auto &_p1 = peaks[limb_index.first][p1];
 					const auto &_p2 = peaks[limb_index.second][p2];
-					keypoints.push_back(std::make_pair(std::make_pair(std::get<0>(_p1), std::get<1>(_p1)), std::make_pair(std::get<0>(_p2), std::get<1>(_p2))));
+					keypoints.push_back(std::make_pair(std::make_tuple(limb_index.first, std::get<0>(_p1), std::get<1>(_p1)), std::make_tuple(limb_index.second, std::get<0>(_p2), std::get<1>(_p2))));
 				}
 			}
 		}

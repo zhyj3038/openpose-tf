@@ -55,12 +55,12 @@ def estimate(config, image, limbs_index, limbs, parts):
         utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count)
     elif args.show == 'cluster':
         utils.visualize.show_clusters(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count)
-    results = pyopenpose.estimate(limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, cluster_min_score, cluster_min_count)
+    clusters = pyopenpose.estimate(limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, cluster_min_score, cluster_min_count)
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)
     scale_y, scale_x = utils.preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
-    utils.visualize.draw_results(ax, scale_y, scale_x, results)
+    utils.visualize.draw_estimation(ax, scale_y, scale_x, clusters)
     ax.set_xticks([])
     ax.set_yticks([])
     return fig
@@ -118,6 +118,7 @@ def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('path', help='input image path')
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
+    parser.add_argument('-e', '--exts', nargs='+', default=['.jpg', '.png'])
     parser.add_argument('-d', '--dump', help='folder path of feature map dump file')
     parser.add_argument('-s', '--show')
     parser.add_argument('--level', default='info', help='logging level')

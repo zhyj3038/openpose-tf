@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "convert.hpp"
 
 template <typename _T>
-std::list<std::list<std::pair<std::pair<_T, _T>, std::pair<_T, _T> > > > estimate(const std::vector<std::pair<Eigen::DenseIndex, Eigen::DenseIndex> > &limbs_index, pybind11::array_t<_T> limbs, pybind11::array_t<_T> parts, const _T threshold, const size_t limits, const size_t steps, const _T min_score, const size_t min_count, const _T cluster_min_score, const size_t cluster_min_count)
+std::list<std::list<std::pair<std::tuple<Eigen::DenseIndex, _T, _T>, std::tuple<Eigen::DenseIndex, _T, _T> > > > estimate(const std::vector<std::pair<Eigen::DenseIndex, Eigen::DenseIndex> > &limbs_index, pybind11::array_t<_T> limbs, pybind11::array_t<_T> parts, const _T threshold, const size_t limits, const size_t steps, const _T min_score, const size_t min_count, const _T cluster_min_score, const size_t cluster_min_count)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef Eigen::Tensor<_T, 3, Eigen::RowMajor, _TIndex> _TTensor;
