@@ -62,7 +62,7 @@ void AugmentationOp<_TPixel, _TReal, _TInteger>::Compute(tensorflow::OpKernelCon
 	const tensorflow::Tensor &mask = context->input(1);
 	const tensorflow::Tensor &keypoints = context->input(2);
 	const auto size_image = context->input(3).vec<TInteger>();
-	const auto size_label = context->input(4).vec<TInteger>();
+	const auto size_feature = context->input(4).vec<TInteger>();
 	const auto scale = context->input(5).vec<TReal>();
 	const TReal rotate = context->input(6).scalar<TReal>()(0);
 	const TPixel fill = context->input(7).scalar<TPixel>()(0);
@@ -70,7 +70,7 @@ void AugmentationOp<_TPixel, _TReal, _TInteger>::Compute(tensorflow::OpKernelCon
 	tensorflow::Tensor *image_result = NULL;
 	OP_REQUIRES_OK(context, context->allocate_output(0, tensorflow::TensorShape({size_image(0), size_image(1), image.shape().dim_size(2)}), &image_result));
 	tensorflow::Tensor *mask_result = NULL;
-	OP_REQUIRES_OK(context, context->allocate_output(1, tensorflow::TensorShape({size_label(0), size_label(1), mask.shape().dim_size(2)}), &mask_result));
+	OP_REQUIRES_OK(context, context->allocate_output(1, tensorflow::TensorShape({size_feature(0), size_feature(1), mask.shape().dim_size(2)}), &mask_result));
 	tensorflow::Tensor *keypoints_result = NULL;
 	OP_REQUIRES_OK(context, context->allocate_output(2, keypoints.shape(), &keypoints_result));
 

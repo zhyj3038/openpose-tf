@@ -127,13 +127,13 @@ def main():
     _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
-    size_label = utils.calc_downsampling_size(config.get('backbone', 'dnn'), size_image[0], size_image[1])
-    tf.logging.warn('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
+    size_feature = utils.calc_downsampling_size(config.get('backbone', 'dnn'), size_image[0], size_image[1])
+    tf.logging.warn('size_image=%s, size_feature=%s' % (str(size_image), str(size_feature)))
     paths = [os.path.join(cachedir, phase + '.tfrecord') for phase in args.phase]
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
     with tf.name_scope('batch'):
-        image, mask, _, limbs, parts = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs_index)
+        image, mask, _, limbs, parts = utils.data.load_data(config, paths, size_image, size_feature, num_parts, limbs_index)
         with tf.name_scope('per_image_standardization'):
             image = tf.image.per_image_standardization(image)
         batch = tf.train.shuffle_batch([image, mask, limbs, parts], batch_size=args.batch_size,
@@ -143,7 +143,7 @@ def main():
         with tf.name_scope('output'):
             image, mask, limbs, parts = tf.identity(image, 'image'), tf.identity(mask, 'mask'), tf.identity(limbs, 'limbs'), tf.identity(parts, 'parts')
     net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
-    assert tuple(net.get_shape().as_list()[1:3]) == size_label
+    assert tuple(net.get_shape().as_list()[1:3]) == size_feature
     utils.parse_attr(config.get('stages', 'dnn'))(config, net, limbs, parts, mask)
     with tf.name_scope('total_loss') as name:
         total_loss = tf.losses.get_total_loss(name=name)

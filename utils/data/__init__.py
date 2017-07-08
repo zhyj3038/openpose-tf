@@ -46,7 +46,7 @@ def decode_image_label(config, paths, num_parts):
     return image, mask, keypoints
 
 
-def data_augmentation(config, image, mask, keypoints, size_image, size_label):
+def data_augmentation(config, image, mask, keypoints, size_image):
     section = inspect.stack()[0][3]
     with tf.name_scope(section):
         if config.getboolean(section, 'random_flip_horizontally'):
@@ -65,26 +65,26 @@ def data_augmentation(config, image, mask, keypoints, size_image, size_label):
     return image, mask, keypoints
 
 
-def load_data(config, paths, size_image, size_label, num_parts, limbs_index):
+def load_data(config, paths, size_image, size_feature, num_parts, limbs_index):
     section = inspect.stack()[0][3]
     with tf.name_scope(section):
         image, mask, keypoints = decode_image_label(config, paths, num_parts)
         scale = list(map(float, config.get('data_augmentation', 'scale').split()))
         rotate = config.getfloat('data_augmentation', 'rotate')
         fill = config.getint('data_augmentation', 'fill')
-        image, mask, keypoints = __ops__.augmentation(image, mask, keypoints, size_image, size_label, scale, rotate, fill)
+        image, mask, keypoints = __ops__.augmentation(image, mask, keypoints, size_image, size_feature, scale, rotate, fill)
         shape = image.get_shape().as_list()
         assert shape[:-1] == list(size_image)
         if shape[-1] is None:
             image = tf.reshape(image, shape[:2] + [config.getint('config', 'channels')], name='fix_channels')
-        assert mask.get_shape().as_list()[:-1] == list(size_label)
+        assert mask.get_shape().as_list()[:-1] == list(size_feature)
         image = tf.cast(image, tf.float32)
-        image, mask, keypoints = data_augmentation(config, image, mask, keypoints, size_image, size_label)
+        image, mask, keypoints = data_augmentation(config, image, mask, keypoints, size_image)
         image = tf.clip_by_value(image, 0, 255)
         mask = tf.to_float(mask > 127)
     sigma_parts = config.getfloat('label', 'sigma_parts')
     sigma_limbs = config.getfloat('label', 'sigma_limbs')
-    limbs, parts = __ops__.label(size_image, size_label, keypoints, limbs_index, sigma_parts, sigma_limbs)
-    assert limbs.get_shape().as_list()[:-1] == list(size_label)
-    assert parts.get_shape().as_list()[:-1] == list(size_label)
+    limbs, parts = __ops__.label(size_image, size_feature, keypoints, limbs_index, sigma_parts, sigma_limbs)
+    assert limbs.get_shape().as_list()[:-1] == list(size_feature)
+    assert parts.get_shape().as_list()[:-1] == list(size_feature)
     return image, mask, keypoints, limbs, parts

@@ -34,14 +34,14 @@ def main():
     _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
     size_image = config.getint('config', 'height'), config.getint('config', 'width')
-    size_label = utils.calc_downsampling_size(config.get('backbone', 'dnn'), size_image[0], size_image[1])
-    tf.logging.info('size_image=%s, size_label=%s' % (str(size_image), str(size_label)))
+    size_feature = utils.calc_downsampling_size(config.get('backbone', 'dnn'), size_image[0], size_image[1])
+    tf.logging.info('size_image=%s, size_feature=%s' % (str(size_image), str(size_feature)))
     paths = [os.path.join(cachedir, phase + '.tfrecord') for phase in args.phase]
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
     with tf.Session() as sess:
         with tf.name_scope('batch'):
-            image, mask, _, limbs, parts = utils.data.load_data(config, paths, size_image, size_label, num_parts, limbs_index)
+            image, mask, _, limbs, parts = utils.data.load_data(config, paths, size_image, size_feature, num_parts, limbs_index)
             batch = tf.train.shuffle_batch([image, mask, limbs, parts], batch_size=args.batch_size,
                 capacity=config.getint('queue', 'capacity'), min_after_dequeue=config.getint('queue', 'min_after_dequeue'), num_threads=multiprocessing.cpu_count()
             )
