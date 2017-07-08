@@ -67,7 +67,7 @@ def get_logdir(config):
     dataset = os.path.basename(config.get('cache', 'dataset'))
     backbone = os.path.splitext(config.get('backbone', 'dnn'))[-1][1:]
     stages = os.path.splitext(config.get('stages', 'dnn'))[-1][1:]
-    return os.path.join(basedir, dataset, backbone, stages)
+    return os.path.join(basedir, 'logdir', dataset, backbone, stages)
 
 
 def get_limbs_index(config):

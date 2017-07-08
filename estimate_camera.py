@@ -44,7 +44,7 @@ def main():
     logdir = utils.get_logdir(config)
     _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
-    size_image = config.getint('config', 'height'), config.getint('config', 'width')
+    height, width = config.getint('config', 'height'), config.getint('config', 'width')
     
     threshold = config.getfloat('nms', 'threshold')
     limits = config.getint('nms', 'limits')
@@ -68,12 +68,13 @@ def main():
                     cv2.putText(image, str(i2), (x2, y2), font, 1, (255,255,255), 2)
     
     with tf.Session() as sess:
-        image = tf.placeholder(tf.float32, [1, size_image[0], size_image[1], 3], name='image')
+        image = tf.placeholder(tf.float32, [1, height, width, 3], name='image')
         net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
         limbs, parts = utils.parse_attr(config.get('stages', 'dnn'))(config, net, len(limbs_index), num_parts)
         limbs = tf.check_numerics(limbs, limbs.op.name)
         parts = tf.check_numerics(parts[:, :, :, :-1], parts.op.name) # drop background channel
         tf.logging.info(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) for var in tf.global_variables())))
+        tf.logging.info('locating checkpoint in ' + logdir)
         checkpoint_path = tf.train.latest_checkpoint(logdir)
         tf.logging.info('load ' + checkpoint_path)
         slim.assign_from_checkpoint_fn(checkpoint_path, tf.global_variables())(sess)
@@ -83,7 +84,7 @@ def main():
                 ret, image_bgr = cap.read()
                 assert ret
                 image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-                image_resized = utils.preprocess.resize(image_rgb, size_image[0], size_image[1])
+                image_resized = utils.preprocess.resize(image_rgb, height, width)
                 _limbs, _parts = eval_tensor(sess, image, utils.preprocess.per_image_standardization(image_resized.astype(np.float32)), [limbs, parts])
                 _estimate(image_bgr, _limbs, _parts)
                 cv2.imshow('estimation', image_bgr)

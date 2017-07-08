@@ -30,28 +30,27 @@ def main():
     cachedir = utils.get_cachedir(config)
     _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
-    size_image = config.getint('config', 'height'), config.getint('config', 'width')
-    size_feature = utils.calc_downsampling_size(config.get('backbone', 'dnn'), size_image[0], size_image[1])
-    tf.logging.info('size_image=%s, size_feature=%s' % (str(size_image), str(size_feature)))
+    height, width = config.getint('config', 'height'), config.getint('config', 'width')
+    feature_height, feature_width = utils.calc_downsampling_size(config.get('backbone', 'dnn'), height, width)
     paths = [os.path.join(cachedir, phase + '.tfrecord') for phase in args.phase]
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
     threshold = config.getfloat('nms', 'threshold')
     limits = config.getint('nms', 'limits')
     with tf.Session() as sess:
-        data = utils.data.load_data(config, paths, size_image, size_feature, num_parts, limbs_index)
+        data = utils.data.load_data(config, paths, height, width, feature_height, feature_width, num_parts, limbs_index)
         tf.global_variables_initializer().run()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess, coord)
         while True:
-            image, _, keypoints, limbs, parts = sess.run(data)
-            assert image.shape[:2] == size_image
-            assert limbs.shape[:2] == size_feature
-            assert parts.shape[:2] == size_feature
+            image, _, _, limbs, parts = sess.run(data)
+            assert image.shape[:2] == (height, width)
+            assert limbs.shape[:2] == (feature_height, feature_width)
+            assert parts.shape[:2] == (feature_height, feature_width)
             image = image.astype(np.uint8)
             assert limbs.shape[2] == len(limbs_index) * 2
             assert parts.shape[2] == num_parts + 1
-            scale_y, scale_x = size_image[0] / size_feature[0], size_image[1] / size_feature[1]
+            scale_y, scale_x = height / feature_height, width / feature_width
             for i, (i1, i2) in enumerate(limbs_index):
                 fig, axes = plt.subplots(2, 2)
                 for ax in axes[0]:
@@ -82,8 +81,8 @@ def main():
                         tf.logging.info('(%f, %f)' % (limb1[y, x], limb2[y, x]))
                         ax.plot(x * scale_x, y * scale_y, '.', color=args.color2)
                 for ax in axes.flat:
-                    ax.set_xlim([0, size_image[1] - 1])
-                    ax.set_ylim([size_image[0] - 1, 0])
+                    ax.set_xlim([0, width - 1])
+                    ax.set_ylim([height - 1, 0])
                     ax.set_xticks([])
                     ax.set_yticks([])
                 fig.canvas.set_window_title('limb%d (%d-%d)' % (i, i1, i2))
