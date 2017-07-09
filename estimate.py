@@ -33,21 +33,21 @@ import pyopenpose
 
 def estimate(config, image, limbs_index, limbs, parts):
     threshold = config.getfloat('nms', 'threshold')
-    limits = config.getint('nms', 'limits')
+    radius = config.getint('nms', 'radius')
     steps = config.getint('integration', 'steps')
     min_score = config.getfloat('integration', 'min_score')
     min_count = config.getint('integration', 'min_count')
     cluster_min_score = config.getfloat('cluster', 'min_score')
     cluster_min_count = config.getint('cluster', 'min_count')
     if args.show == 'nms':
-        utils.visualize.show_nms(image, parts, threshold, limits)
+        utils.visualize.show_nms(image, parts, threshold, radius)
     elif args.show == 'score':
-        utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, 0, 1)
+        utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, radius, steps, 0, 1)
     elif args.show == 'connection':
-        utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count)
+        utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count)
     elif args.show == 'cluster':
-        utils.visualize.show_clusters(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count)
-    clusters = pyopenpose.estimate(limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, cluster_min_score, cluster_min_count)
+        utils.visualize.show_clusters(image, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count)
+    clusters = pyopenpose.estimate(limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count, cluster_min_score, cluster_min_count)
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)

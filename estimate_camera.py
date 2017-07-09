@@ -47,7 +47,7 @@ def main():
     height, width = config.getint('config', 'height'), config.getint('config', 'width')
     
     threshold = config.getfloat('nms', 'threshold')
-    limits = config.getint('nms', 'limits')
+    radius = config.getint('nms', 'radius')
     steps = config.getint('integration', 'steps')
     min_score = config.getfloat('integration', 'min_score')
     min_count = config.getint('integration', 'min_count')
@@ -56,7 +56,7 @@ def main():
     colors = [tuple(map(lambda c: c * 255, matplotlib.colors.colorConverter.to_rgb(prop['color']))) for prop in plt.rcParams['axes.prop_cycle']]
     
     def _estimate(image, limbs, parts, font=cv2.FONT_HERSHEY_SIMPLEX):
-        clusters = pybenchmark.profile('estimate')(pyopenpose.estimate)(limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, cluster_min_score, cluster_min_count)
+        clusters = pybenchmark.profile('estimate')(pyopenpose.estimate)(limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count, cluster_min_score, cluster_min_count)
         scale_y, scale_x = utils.preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
         for color, cluster in zip(itertools.cycle(colors), clusters):
             for (i1, y1, x1), (i2, y2, x2) in cluster:

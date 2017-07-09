@@ -28,9 +28,9 @@ namespace openpose
 namespace postprocess
 {
 template <typename _T, typename _TTensor, int Options>
-std::list<std::list<std::pair<std::tuple<Eigen::DenseIndex, _T, _T>, std::tuple<Eigen::DenseIndex, _T, _T> > > > estimate(const std::vector<std::pair<Eigen::DenseIndex, Eigen::DenseIndex> > &limbs_index, Eigen::TensorMap<_TTensor, Options> limbs, Eigen::TensorMap<_TTensor, Options> parts, const _T threshold, const size_t limits, const size_t steps, const _T min_score, const size_t min_count, const _T cluster_min_score, const size_t cluster_min_count)
+std::list<std::list<std::pair<std::tuple<Eigen::DenseIndex, _T, _T>, std::tuple<Eigen::DenseIndex, _T, _T> > > > estimate(const std::vector<std::pair<Eigen::DenseIndex, Eigen::DenseIndex> > &limbs_index, Eigen::TensorMap<_TTensor, Options> limbs, Eigen::TensorMap<_TTensor, Options> parts, const _T threshold, const _T radius, const size_t steps, const _T min_score, const size_t min_count, const _T cluster_min_score, const size_t cluster_min_count)
 {
-	const auto peaks = featuremap_peaks(parts, threshold, limits);
+	const auto peaks = featuremap_peaks(parts, threshold, radius);
 	auto clusters = clustering(limbs_index, limbs, peaks, steps, min_score, min_count);
 	return filter_cluster(limbs_index, peaks, clusters, cluster_min_score, cluster_min_count);
 }

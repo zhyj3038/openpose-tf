@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <list>
 #include <tuple>
+#include <cmath>
 #include <type_traits>
 #include <tensorflow/core/framework/tensor_types.h>
 
@@ -52,20 +53,57 @@ std::list<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, typename std::remove_
 }
 
 template <typename _T>
-std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > limit_peaks(const std::list<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > &peaks, const size_t limits)
+std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > filter_peaks(std::list<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, _T> > &peaks, const _T radius)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef std::tuple<_TIndex, _TIndex, _T> _TPeak;
-	typedef std::vector<_TPeak> _TPeaks;
-	_TPeaks _peaks(peaks.begin(), peaks.end());
-	const size_t _limits = std::min(_peaks.size(), limits);
-	std::partial_sort(_peaks.begin(), _peaks.begin() + _limits, _peaks.end(), [](const _TPeak &a, const _TPeak &b)->bool{return std::get<2>(a) > std::get<2>(b);});
-	_peaks.resize(_limits);
-	return _peaks;
+	typedef std::list<_TPeak> _TPeaks;
+	typedef typename _TPeaks::iterator _TIterator;
+	std::vector<_TIterator> _peaks(peaks.size());
+	{
+		size_t index = 0;
+		for (_TIterator i = peaks.begin(); i != peaks.end(); ++i)
+		{
+			_peaks[index] = i;
+			++index;
+		}
+	}
+	std::sort(_peaks.begin(), _peaks.end(), [](_TIterator a, _TIterator b)->bool{return std::get<2>(*a) > std::get<2>(*b);});
+	for (size_t i = 0; i < _peaks.size(); ++i)
+	{
+		const _TPeak &peak1 = *_peaks[i];
+		if (std::get<2>(peak1) <= 0)
+			continue;
+		const _T y1 = std::get<0>(peak1), x1 = std::get<1>(peak1);
+		for (size_t j = i + 1; j < _peaks.size(); ++j)
+		{
+			_TPeak &peak2 = *_peaks[j];
+			if (std::get<2>(peak2) <= 0)
+				continue;
+			const _T y2 = std::get<0>(peak2), x2 = std::get<1>(peak2);
+			const _T xdiff = x1 - x2, ydiff = y1 - y2;
+			const _T dist = sqrt(xdiff * xdiff + ydiff * ydiff);
+			if (dist < radius)
+				std::get<2>(peak2) = 0;
+		}
+	}
+	for (_TIterator i = peaks.begin(); i != peaks.end();)
+	{
+		const _TPeak &peak = *i;
+		if (std::get<2>(peak) <= 0)
+		{
+			_TIterator remove = i;
+			++i;
+			peaks.erase(remove);
+		}
+		else
+			++i;
+	}
+	return std::vector<_TPeak>(peaks.begin(), peaks.end());
 }
 
 template <typename _TTensor, int Options>
-std::vector<std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, typename std::remove_const<typename _TTensor::Scalar>::type> > > featuremap_peaks(Eigen::TensorMap<_TTensor, Options> featuremap, const typename _TTensor::Scalar threshold, const size_t limits)
+std::vector<std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, typename std::remove_const<typename _TTensor::Scalar>::type> > > featuremap_peaks(Eigen::TensorMap<_TTensor, Options> featuremap, const typename _TTensor::Scalar threshold, const typename _TTensor::Scalar radius)
 {
 	typedef Eigen::DenseIndex _TIndex;
 	typedef typename std::remove_const<typename _TTensor::Scalar>::type _T;
@@ -75,8 +113,8 @@ std::vector<std::vector<std::tuple<Eigen::DenseIndex, Eigen::DenseIndex, typenam
 	for (size_t i = 0; i < result.size(); ++i)
 	{
 		const Eigen::Tensor<_T, 2, Eigen::RowMajor, _TIndex> feature = featuremap.chip(i, 2);
-		const auto peaks = feature_peaks(typename tensorflow::TTypes<_T, 2>::ConstTensor(feature.data(), feature.dimensions()), threshold);
-		result[i] = limit_peaks(peaks, limits);
+		auto peaks = feature_peaks(typename tensorflow::TTypes<_T, 2>::ConstTensor(feature.data(), feature.dimensions()), threshold);
+		result[i] = filter_peaks(peaks, radius);
 	}
 	return result;
 }

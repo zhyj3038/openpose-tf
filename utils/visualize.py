@@ -60,11 +60,11 @@ def draw_estimation(ax, scale_y, scale_x, clusters):
             ax.text(x2, y2, str(i2))
 
 
-def show_nms(image, parts, threshold, limits, alpha=0.5):
+def show_nms(image, parts, threshold, radius, alpha=0.5):
     scale_y, scale_x = preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
     maxsize = max(image.shape[:2])
     for index, feature in enumerate(np.transpose(parts, [2, 0, 1])):
-        peaks = pyopenpose.feature_peaks(feature, threshold, limits)
+        peaks = pyopenpose.feature_peaks(feature, threshold, radius)
         fig = plt.figure()
         ax = fig.gca()
         ax.imshow(image)
@@ -72,10 +72,10 @@ def show_nms(image, parts, threshold, limits, alpha=0.5):
         draw_peaks(ax, scale_y, scale_x, peaks, str(index))
         ax.set_xticks([])
         ax.set_yticks([])
-        fig.canvas.set_window_title('part%d' % index)
+        fig.canvas.set_window_title('part%d (%d points)' % (index, len(peaks)))
         fig.tight_layout()
         plt.show()
-    peaks = pyopenpose.featuremap_peaks(parts, threshold, limits)
+    peaks = pyopenpose.featuremap_peaks(parts, threshold, radius)
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)
@@ -87,9 +87,9 @@ def show_nms(image, parts, threshold, limits, alpha=0.5):
     plt.show()
 
 
-def show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, alpha=0.5, linewidth=10):
+def show_connection(image, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count, alpha=0.5, linewidth=10):
     scale_y, scale_x = preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
-    peaks = pyopenpose.featuremap_peaks(parts, threshold, limits)
+    peaks = pyopenpose.featuremap_peaks(parts, threshold, radius)
     assert len(peaks) == parts.shape[-1]
     _limbs = np.reshape(limbs, limbs.shape[:2] + (-1, 2))
     _limbs = np.transpose(_limbs, [2, 3, 0, 1])
@@ -136,9 +136,9 @@ def show_connection(image, limbs_index, limbs, parts, threshold, limits, steps, 
         plt.show()
 
 
-def show_clusters(image, limbs_index, limbs, parts, threshold, limits, steps, min_score, min_count, linewidth=10):
+def show_clusters(image, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count, linewidth=10):
     scale_y, scale_x = preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
-    peaks = pyopenpose.featuremap_peaks(parts, threshold, limits)
+    peaks = pyopenpose.featuremap_peaks(parts, threshold, radius)
     assert len(peaks) == parts.shape[-1]
     clusters = pyopenpose.clustering(limbs_index, limbs, peaks, steps, min_score, min_count)
     fig = plt.figure()

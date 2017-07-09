@@ -44,7 +44,7 @@ int main(void)
 	typedef cv::Mat_<_TVec3> _TMat3;
 
 	const _TReal threshold = 0.05;
-	const size_t limits = 3;
+	const _TReal radius = 7;
 	const size_t steps = 10;
 	const _TReal min_score = 0.05;
 	const size_t min_count = 9;
@@ -56,7 +56,7 @@ int main(void)
 	openpose::image_ = image;
 	openpose::parts_ = parts;
 #endif
-	const auto peaks = openpose::postprocess::featuremap_peaks(typename tensorflow::TTypes<_TReal, 3>::ConstTensor(parts.data(), parts.dimensions()), threshold, limits);
+	const auto peaks = openpose::postprocess::featuremap_peaks(typename tensorflow::TTypes<_TReal, 3>::ConstTensor(parts.data(), parts.dimensions()), threshold, radius);
 	const auto clusters = openpose::postprocess::clustering(_TLimbsIndex(limbs_index.begin(), limbs_index.end()), typename tensorflow::TTypes<_TReal, 3>::ConstTensor(limbs.data(), limbs.dimensions()), peaks, steps, min_score, min_count);
 	return 0;
 }
