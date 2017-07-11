@@ -73,7 +73,7 @@ def main():
         limbs, parts = utils.parse_attr(config.get('stages', 'dnn'))(config, net, len(limbs_index), num_parts)
         limbs = tf.check_numerics(limbs, limbs.op.name)
         parts = tf.check_numerics(parts[:, :, :, :-1], parts.op.name) # drop background channel
-        tf.logging.info(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) for var in tf.global_variables())))
+        tf.logging.info(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) * var.dtype.size for var in tf.global_variables())))
         tf.logging.info('locating checkpoint in ' + logdir)
         checkpoint_path = tf.train.latest_checkpoint(logdir)
         tf.logging.info('load ' + checkpoint_path)
