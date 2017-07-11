@@ -1,4 +1,0 @@
-vgg_19/conv\d+/conv\d+_\d+/weights$	1
-vgg_19/conv\d+/conv\d+_\d+/biases$	2
-backbone/conv\d+/weights$	1
-backbone/conv\d+/biases$	2

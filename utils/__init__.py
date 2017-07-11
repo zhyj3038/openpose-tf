@@ -88,13 +88,27 @@ def calc_downsampling_size(dnn, height, width):
     return func(height, width)
 
 
-def match_trainable_variables(pattern):
-    prog = re.compile(pattern)
+class MultiRegex(list):
+    def __init__(self, patterns):
+        for pattern in patterns:
+            if pattern:
+                self.append(re.compile(pattern))
+    
+    def match(self, s):
+        for prog in self:
+            m = prog.match(s)
+            if m:
+                return m
+        return None
+
+
+def match_trainable_variables(patterns):
+    prog = MultiRegex(patterns)
     return [v for v in tf.trainable_variables() if prog.match(v.op.name)]
 
 
-def match_tensor(pattern):
-    prog = re.compile(pattern)
+def match_tensor(patterns):
+    prog = MultiRegex(patterns)
     return [op.values()[0] for op in tf.get_default_graph().get_operations() if op.values() and prog.match(op.name)]
 
 

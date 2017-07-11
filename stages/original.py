@@ -51,18 +51,18 @@ def original(config, net, limbs, parts, mask=None, stages=6, channels=128, scope
                         index = 0
                         net = tf.identity(net, 'input')
                         if stage == 0:
-                            with slim.arg_scope([slim.layers.conv2d], num_outputs=128, kernel_size=[3, 3]):
+                            with slim.arg_scope([slim.conv2d], num_outputs=128, kernel_size=[3, 3]):
                                 for _ in range(3):
-                                    net = slim.layers.conv2d(net, scope='conv%d' % index)
+                                    net = slim.conv2d(net, scope='conv%d' % index)
                                     index += 1
-                            net = slim.layers.conv2d(net, 512, kernel_size=[1, 1], scope='conv%d' % index)
+                            net = slim.conv2d(net, 512, kernel_size=[1, 1], scope='conv%d' % index)
                         else:
-                            with slim.arg_scope([slim.layers.conv2d], num_outputs=channels, kernel_size=[7, 7]):
+                            with slim.arg_scope([slim.conv2d], num_outputs=channels, kernel_size=[7, 7]):
                                 for _ in range(5):
-                                    net = slim.layers.conv2d(net, scope='conv%d' % index)
+                                    net = slim.conv2d(net, scope='conv%d' % index)
                                     index += 1
-                                net = slim.layers.conv2d(net, kernel_size=[1, 1], scope='conv%d' % index)
-                        net = slim.layers.conv2d(net, label if mask is None else label.get_shape().as_list()[-1], kernel_size=[1, 1], activation_fn=None, scope='conv')
+                                net = slim.conv2d(net, kernel_size=[1, 1], scope='conv%d' % index)
+                        net = slim.conv2d(net, label if mask is None else label.get_shape().as_list()[-1], kernel_size=[1, 1], activation_fn=None, scope='conv')
                         net = tf.identity(net, 'output')
                         if mask is not None:
                             with tf.name_scope('loss') as name:

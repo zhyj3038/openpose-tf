@@ -32,7 +32,9 @@ import utils.data
 def summary_scalar(config):
     try:
         reduce = eval(config.get('summary', 'scalar_reduce'))
-        for t in utils.match_tensor(config.get('summary', 'scalar')):
+        with open(os.path.expanduser(os.path.expandvars(config.get('summary', 'scalar'))), 'r') as f:
+            patterns = filter(lambda pattern: pattern[0] != '#', map(lambda line: line.strip(), f.readlines()))
+        for t in utils.match_tensor(patterns):
             name = t.op.name
             if len(t.get_shape()) > 0:
                 t = reduce(t)
@@ -46,7 +48,9 @@ def summary_scalar(config):
 def summary_image(config):
     try:
         image_max = config.getint('summary', 'image_max')
-        for t in utils.match_tensor(config.get('summary', 'image')):
+        with open(os.path.expanduser(os.path.expandvars(config.get('summary', 'image_split'))), 'r') as f:
+            patterns = filter(lambda pattern: pattern[0] != '#', map(lambda line: line.strip(), f.readlines()))
+        for t in utils.match_tensor(patterns):
             name = t.op.name
             shape = t.get_shape().as_list()
             if len(shape) == 4:
@@ -67,7 +71,9 @@ def summary_image(config):
 
 def summary_histogram(config):
     try:
-        for t in utils.match_tensor(config.get('summary', 'histogram')):
+        with open(os.path.expanduser(os.path.expandvars(config.get('summary', 'histogram'))), 'r') as f:
+            patterns = filter(lambda pattern: pattern[0] != '#', map(lambda line: line.strip(), f.readlines()))
+        for t in utils.match_tensor(patterns):
             name = t.op.name
             tf.summary.histogram(name, t)
             tf.logging.warn('add summary histogram ' + name)

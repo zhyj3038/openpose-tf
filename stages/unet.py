@@ -51,33 +51,33 @@ def unet(config, net, limbs, parts, mask=None, stages=6, channels=128, sqz=128 /
                         index = 0
                         net = tf.identity(net, 'input')
                         if stage == 0:
-                            with slim.arg_scope([slim.layers.conv2d], num_outputs=128, kernel_size=[3, 3]):
+                            with slim.arg_scope([slim.conv2d], num_outputs=128, kernel_size=[3, 3]):
                                 for _ in range(3):
-                                    net = slim.layers.conv2d(net, scope='conv%d' % index)
+                                    net = slim.conv2d(net, scope='conv%d' % index)
                                     index += 1
-                            net = slim.layers.conv2d(net, 512, kernel_size=[1, 1], scope='conv%d' % index)
+                            net = slim.conv2d(net, 512, kernel_size=[1, 1], scope='conv%d' % index)
                         else:
-                            with slim.arg_scope([slim.layers.conv2d], num_outputs=channels, kernel_size=[3, 3]), slim.arg_scope([slim.layers.max_pool2d], kernel_size=[2, 2], padding='SAME'):
-                                net = slim.layers.conv2d(net, scope='conv%d' % index)
+                            with slim.arg_scope([slim.conv2d], num_outputs=channels, kernel_size=[3, 3]), slim.arg_scope([slim.max_pool2d], kernel_size=[2, 2]):
+                                net = slim.conv2d(net, scope='conv%d' % index)
                                 nets = [net]
                                 index += 1
                                 for _ in range(num):
                                     net = slim.max_pool2d(net, scope='pool%d' % index)
                                     if sqz > 0:
-                                        net = slim.layers.conv2d(net, kernel_size=[1, 1], scope='sqz%d' % index)
-                                    net = slim.layers.conv2d(net, scope='conv%d' % index)
+                                        net = slim.conv2d(net, kernel_size=[1, 1], scope='sqz%d' % index)
+                                    net = slim.conv2d(net, scope='conv%d' % index)
                                     index += 1
                                     nets.append(net)
                                 nets.pop()
                                 for _net in nets[::-1]:
                                     if sqz > 0:
-                                        net = slim.layers.conv2d(net, kernel_size=[1, 1], scope='sqz%d' % index)
+                                        net = slim.conv2d(net, kernel_size=[1, 1], scope='sqz%d' % index)
                                     with tf.name_scope('interp%d' % index):
                                         net = tf.image.resize_images(net, _net.get_shape()[1:3])
                                         net = tf.concat([net, _net], -1)
-                                    net = slim.layers.conv2d(net, scope='conv%d' % index)
+                                    net = slim.conv2d(net, scope='conv%d' % index)
                                     index += 1
-                        net = slim.layers.conv2d(net, label if mask is None else label.get_shape().as_list()[-1], kernel_size=[1, 1], activation_fn=None, scope='conv')
+                        net = slim.conv2d(net, label if mask is None else label.get_shape().as_list()[-1], kernel_size=[1, 1], activation_fn=None, scope='conv')
                         net = tf.identity(net, 'output')
                         if mask is not None:
                             with tf.name_scope('loss') as name:
