@@ -93,7 +93,8 @@ def main():
     with tf.Session() as sess:
         image = tf.placeholder(tf.float32, [1, height, width, 3], name='image')
         net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
-        limbs, parts = utils.parse_attr(config.get('stages', 'dnn'))(config, net, len(limbs_index), num_parts)
+        stages = utils.parse_attr(config.get('stages', 'dnn'))(config, len(limbs_index), num_parts)
+        limbs, parts = stages(net)
         limbs = tf.check_numerics(limbs, limbs.op.name)
         parts = tf.check_numerics(parts[:, :, :, :-1], parts.op.name) # drop background channel
         tf.logging.info(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) * var.dtype.size for var in tf.global_variables())))

@@ -1,2 +1,2 @@
 batch/output/(image|mask|limbs|parts)$
-stages/stage[5]/(limbs|parts)/output$
+stages/stage[1]/(limbs|parts)/output$

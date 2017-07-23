@@ -1,2 +1,2 @@
-stages/stage\d+/(limbs|parts)/loss$
+loss_stages/stage\d+/(limbs|parts)$
 total_loss$

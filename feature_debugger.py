@@ -144,13 +144,14 @@ def main():
     with tf.Session() as sess:
         image = tf.placeholder(tf.float32, [1, height, width, 3], name='image')
         net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
-        utils.parse_attr(config.get('stages', 'dnn'))(config, net, len(limbs_index), num_parts)
+        stages = utils.parse_attr(config.get('stages', 'dnn'))(config, len(limbs_index), num_parts)
+        stages(net)
         tf.logging.info('locating checkpoint in ' + logdir)
         checkpoint_path = tf.train.latest_checkpoint(logdir)
         tf.logging.info('load ' + checkpoint_path)
         slim.assign_from_checkpoint_fn(checkpoint_path, tf.global_variables())(sess)
         app = QtGui.QApplication(sys.argv)
-        widget = Debugger(sess, image, [width, height])
+        widget = Debugger(sess, image, (width, height))
         widget.show()
         sys.exit(app.exec_())
 

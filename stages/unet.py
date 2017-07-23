@@ -15,80 +15,110 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import numbers
+import operator
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
-from stages import make_loss
+import stages
 
 
-def unet(config, net, limbs, parts, mask=None, stages=6, channels=128, sqz=128 // 3, num=2, scope='stages'):
-    with tf.variable_scope(scope):
-        if mask is None:
-            assert isinstance(limbs, numbers.Integral)
-            assert isinstance(parts, numbers.Integral)
-            limbs = limbs * 2
-            parts = parts + 1
-        else:
-            with tf.name_scope('labels'):
-                mask = tf.identity(mask, 'mask')
-                limbs = tf.identity(limbs, 'limbs')
-                parts = tf.identity(parts, 'parts')
-        branches = [('limbs', limbs), ('parts', parts)]
-        
-        image = tf.identity(net, 'image')
-        outputs = [image]
-        for stage in range(stages):
-            with tf.variable_scope('stage%d' % stage):
-                if len(outputs) == 1:
-                    _input = tf.identity(outputs[0], 'input')
-                else:
-                    assert len(outputs) == len(branches)
-                    _input = tf.concat(outputs + [image], -1, name='input')
-                outputs = []
-                for branch, label in branches:
-                    net = _input
-                    with tf.variable_scope(branch):
-                        index = 0
-                        net = tf.identity(net, 'input')
-                        if stage == 0:
-                            with slim.arg_scope([slim.conv2d], num_outputs=128, kernel_size=[3, 3]):
-                                for _ in range(3):
-                                    net = slim.conv2d(net, scope='conv%d' % index)
-                                    index += 1
-                            net = slim.conv2d(net, 512, kernel_size=[1, 1], scope='conv%d' % index)
-                        else:
-                            with slim.arg_scope([slim.conv2d], num_outputs=channels, kernel_size=[3, 3]), slim.arg_scope([slim.max_pool2d], kernel_size=[2, 2]):
-                                net = slim.conv2d(net, scope='conv%d' % index)
-                                nets = [net]
-                                index += 1
-                                for _ in range(num):
-                                    net = slim.max_pool2d(net, scope='pool%d' % index)
-                                    if sqz > 0:
-                                        net = slim.conv2d(net, kernel_size=[1, 1], scope='sqz%d' % index)
-                                    net = slim.conv2d(net, scope='conv%d' % index)
-                                    index += 1
-                                    nets.append(net)
-                                nets.pop()
-                                for _net in nets[::-1]:
-                                    if sqz > 0:
-                                        net = slim.conv2d(net, kernel_size=[1, 1], scope='sqz%d' % index)
-                                    with tf.name_scope('interp%d' % index):
-                                        net = tf.image.resize_images(net, _net.get_shape()[1:3])
-                                        net = tf.concat([net, _net], -1)
-                                    net = slim.conv2d(net, scope='conv%d' % index)
-                                    index += 1
-                        net = slim.conv2d(net, label if mask is None else label.get_shape().as_list()[-1], kernel_size=[1, 1], activation_fn=None, scope='conv')
-                        net = tf.identity(net, 'output')
-                        if mask is not None:
-                            with tf.name_scope('loss') as name:
-                                make_loss(config, net, mask, label, stage, branch, name)
-                    outputs.append(net)
-        return tuple([tf.identity(net, branch) for net, (branch, _) in zip(outputs, branches)])
+class Stages(stages.Stages):
+    def __init__(self, num_limbs, num_parts, stages=2, multiply=[2, 2], sqz=0, sqz0=0):
+        super(Stages, self).__init__(num_limbs, num_parts, stages)
+        self.multiply = multiply
+        self.sqz = sqz
+        self.sqz0 = sqz0
+    
+    def stage_branches(self, stage, _input, train):
+        if stage > 0 and self.sqz0 > 1:
+            channels = sum(map(operator.itemgetter(1), self.branches))
+            c = max(_input.get_shape()[-1].value // self.sqz0, channels)
+            _input = slim.conv2d(_input, c, kernel_size=[1, 1], scope='sqz')
+        return super(Stages, self).stage_branches(stage, _input, train)
+    
+    def stage(self, stage, net, channels, train):
+        _channels = channels
+        with slim.arg_scope([slim.conv2d], kernel_size=[3, 3]), slim.arg_scope([slim.max_pool2d], kernel_size=[2, 2]), slim.arg_scope([slim.conv2d_transpose], kernel_size=[2, 2], stride=2, padding='VALID'):
+            nets = []
+            for index, multiply in enumerate(self.multiply):
+                with tf.variable_scope('down%d' % index):
+                    net = slim.conv2d(net, _channels)
+                    nets.append((index, net))
+                    net = slim.max_pool2d(net)
+                    _channels = int(_channels * multiply)
+            net = slim.conv2d(net, _channels, scope='conv%d' % len(nets))
+            for index, _net in nets[::-1]:
+                with tf.variable_scope('up%d' % index):
+                    _channels = _net.get_shape()[-1].value
+                    net = slim.conv2d_transpose(net, _channels)
+                    _, height, width, _ = net.get_shape().as_list()
+                    _, _height, _width, _ = _net.get_shape().as_list()
+                    assert height <= _height
+                    assert width <= _width
+                    if height != _height or width != _width:
+                        offsets = [0, (_height - height) // 2, (_width - width) // 2, 0]
+                        size = [-1, height, width, _channels]
+                        _net = tf.slice(_net, offsets, size, name='center_crop')
+                    net = tf.concat([net, _net], -1)
+                    if self.sqz > 1:
+                        c = max(net.get_shape()[-1].value // self.sqz, channels)
+                        net = slim.conv2d(net, c, kernel_size=[1, 1], scope='sqz')
+                    net = slim.conv2d(net, _channels)
+        return slim.conv2d(net, channels, kernel_size=[1, 1], activation_fn=None)
 
 
-def unet64(config, net, limbs, parts, mask=None, stages=6, channels=64, sqz=0, num=2, scope='stages'):
-    return unet(config, net, limbs, parts, mask, stages, channels, sqz, num, scope)
+# 4.1M
+class Unet2(Stages):
+    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2], sqz=0, sqz0=0):
+        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
 
 
-def unet64_sqz3(config, net, limbs, parts, mask=None, stages=6, channels=64, sqz=64 // 3, num=2, scope='stages'):
-    return unet(config, net, limbs, parts, mask, stages, channels, sqz, num, scope)
+# M
+class Unet2_1(Stages):
+    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 1.5], sqz=0, sqz0=0):
+        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+
+
+# 2.7M
+class Unet2_2(Stages):
+    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[1.5, 1.5], sqz=0, sqz0=0):
+        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+
+
+# 3.4M
+class Unet2Sqz3(Stages):
+    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2], sqz=3, sqz0=0):
+        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+
+
+# 13.4M
+class Unet3(Stages):
+    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2, 2], sqz=0, sqz0=0):
+        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+
+
+# 10.6M
+class Unet3_1(Stages):
+    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2, 1], sqz=0, sqz0=0):
+        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+
+
+class Unet3_2(Stages):
+    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 1.5, 1], sqz=0, sqz0=0):
+        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+
+
+# 10.5M
+class Unet3Sqz3(Stages):
+    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2, 2], sqz=3, sqz0=0):
+        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+
+
+class Unet3Sqz3_1(Stages):
+    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2, 1], sqz=3, sqz0=0):
+        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+
+
+# 6.3M
+class Unet3Sqz3_2(Stages):
+    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[1.9, 1.6, 1.3], sqz=3, sqz0=0):
+        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)

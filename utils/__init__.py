@@ -112,6 +112,19 @@ def match_tensor(patterns):
     return [op.values()[0] for op in tf.get_default_graph().get_operations() if op.values() and prog.match(op.name)]
 
 
+def get_optimizer(config, name):
+    section = 'optimizer_' + name
+    return {
+        'adam': lambda learning_rate: tf.train.AdamOptimizer(learning_rate, config.getfloat(section, 'beta1'), config.getfloat(section, 'beta2'), config.getfloat(section, 'epsilon')),
+        'adadelta': lambda learning_rate: tf.train.AdadeltaOptimizer(learning_rate, config.getfloat(section, 'rho'), config.getfloat(section, 'epsilon')),
+        'adagrad': lambda learning_rate: tf.train.AdagradOptimizer(learning_rate, config.getfloat(section, 'initial_accumulator_value')),
+        'momentum': lambda learning_rate: tf.train.MomentumOptimizer(learning_rate, config.getfloat(section, 'momentum')),
+        'rmsprop': lambda learning_rate: tf.train.RMSPropOptimizer(learning_rate, config.getfloat(section, 'decay'), config.getfloat(section, 'momentum'), config.getfloat(section, 'epsilon')),
+        'ftrl': lambda learning_rate: tf.train.FtrlOptimizer(learning_rate, config.getfloat(section, 'learning_rate_power'), config.getfloat(section, 'initial_accumulator_value'), config.getfloat(section, 'l1_regularization_strength'), config.getfloat(section, 'l2_regularization_strength')),
+        'gd': lambda learning_rate: tf.train.GradientDescentOptimizer(learning_rate),
+    }[name]
+
+
 def load_config(config, paths):
     for path in paths:
         path = os.path.expanduser(os.path.expandvars(path))

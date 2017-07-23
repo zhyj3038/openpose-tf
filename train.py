@@ -24,8 +24,10 @@ import inspect
 import csv
 import re
 import multiprocessing
+import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+import humanize
 import utils.data
 
 
@@ -111,19 +113,6 @@ def get_gradient_multipliers(paths, variables):
     return dict(gradient_multipliers)
 
 
-def get_optimizer(config, name):
-    section = 'optimizer_' + name
-    return {
-        'adam': lambda learning_rate: tf.train.AdamOptimizer(learning_rate, config.getfloat(section, 'beta1'), config.getfloat(section, 'beta2'), config.getfloat(section, 'epsilon')),
-        'adadelta': lambda learning_rate: tf.train.AdadeltaOptimizer(learning_rate, config.getfloat(section, 'rho'), config.getfloat(section, 'epsilon')),
-        'adagrad': lambda learning_rate: tf.train.AdagradOptimizer(learning_rate, config.getfloat(section, 'initial_accumulator_value')),
-        'momentum': lambda learning_rate: tf.train.MomentumOptimizer(learning_rate, config.getfloat(section, 'momentum')),
-        'rmsprop': lambda learning_rate: tf.train.RMSPropOptimizer(learning_rate, config.getfloat(section, 'decay'), config.getfloat(section, 'momentum'), config.getfloat(section, 'epsilon')),
-        'ftrl': lambda learning_rate: tf.train.FtrlOptimizer(learning_rate, config.getfloat(section, 'learning_rate_power'), config.getfloat(section, 'initial_accumulator_value'), config.getfloat(section, 'l1_regularization_strength'), config.getfloat(section, 'l2_regularization_strength')),
-        'gd': lambda learning_rate: tf.train.GradientDescentOptimizer(learning_rate),
-    }[name]
-
-
 def main():
     logdir = utils.get_logdir(config)
     if args.delete:
@@ -148,18 +137,20 @@ def main():
         with tf.name_scope('output'):
             image, mask, limbs, parts = tf.identity(image, 'image'), tf.identity(mask, 'mask'), tf.identity(limbs, 'limbs'), tf.identity(parts, 'parts')
     net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
-    assert tuple(net.get_shape().as_list()[1:3]) == (feature_height, feature_width)
-    utils.parse_attr(config.get('stages', 'dnn'))(config, net, limbs, parts, mask)
+    assert tuple(net.get_shape().as_list()[1:3]) == (feature_height, feature_width), str(net.get_shape().as_list()[1:3]) + ' != ' + str([feature_height, feature_width])
+    stages = utils.parse_attr(config.get('stages', 'dnn'))(config, len(limbs_index), num_parts)
+    stages(net, train=True)
+    stages.loss(mask, limbs, parts)
+    tf.logging.warn(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) * var.dtype.size for var in tf.global_variables())))
     with tf.name_scope('total_loss') as name:
         total_loss = tf.losses.get_total_loss(name=name)
     global_step = tf.contrib.framework.get_or_create_global_step()
-    variables_to_restore = slim.get_variables_to_restore(exclude=args.exclude)
     try:
         gradient_multipliers = get_gradient_multipliers([config.get('backbone', 'gradient_multipliers'), config.get('stages', 'gradient_multipliers')], tf.trainable_variables())
     except configparser.NoOptionError:
         tf.logging.warn('gradient_multipliers disabled')
         gradient_multipliers = None
-    with tf.name_scope('optimizer'):
+    with tf.variable_scope('optimizer'):
         try:
             decay_steps = config.getint('exponential_decay', 'decay_steps')
             decay_rate = config.getfloat('exponential_decay', 'decay_rate')
@@ -169,12 +160,13 @@ def main():
         except (configparser.NoSectionError, configparser.NoOptionError):
             learning_rate = args.learning_rate
             tf.logging.warn('using a staionary learning rate %f' % args.learning_rate)
-        optimizer = get_optimizer(config, args.optimizer)(learning_rate)
+        optimizer = utils.get_optimizer(config, args.optimizer)(learning_rate)
         tf.logging.warn('optimizer=' + args.optimizer)
         train_op = slim.learning.create_train_op(total_loss, optimizer, global_step,
             clip_gradient_norm=args.gradient_clip, summarize_gradients=config.getboolean('summary', 'gradients'),
             gradient_multipliers=gradient_multipliers
         )
+    variables_to_restore = slim.get_variables_to_restore(exclude=args.exclude)
     if args.transfer:
         path = os.path.expanduser(os.path.expandvars(args.transfer))
         tf.logging.warn('transferring from ' + path)
