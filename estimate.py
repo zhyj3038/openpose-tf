@@ -20,7 +20,6 @@ import argparse
 import configparser
 import operator
 import numpy as np
-import scipy.misc
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import matplotlib
@@ -31,7 +30,7 @@ import utils.visualize
 import pyopenpose
 
 
-def estimate(config, image, limbs_index, limbs, parts):
+def estimate(config, image, symmetric_parts, limbs_index, limbs, parts):
     threshold = config.getfloat('nms', 'threshold')
     radius = config.getint('nms', 'radius')
     steps = config.getint('integration', 'steps')
@@ -39,15 +38,7 @@ def estimate(config, image, limbs_index, limbs, parts):
     min_count = config.getint('integration', 'min_count')
     cluster_min_score = config.getfloat('cluster', 'min_score')
     cluster_min_count = config.getint('cluster', 'min_count')
-    if args.show == 'nms':
-        utils.visualize.show_nms(image, parts, threshold, radius)
-    elif args.show == 'score':
-        utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, radius, steps, 0, 1)
-    elif args.show == 'connection':
-        utils.visualize.show_connection(image, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count)
-    elif args.show == 'cluster':
-        utils.visualize.show_clusters(image, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count)
-    clusters = pyopenpose.estimate(limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count, cluster_min_score, cluster_min_count)
+    clusters = pyopenpose.estimate(symmetric_parts, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count, cluster_min_score, cluster_min_count)
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)
@@ -74,20 +65,11 @@ def eval_tensor(sess, image, _image, tensors):
     return tuple(map(operator.itemgetter(0), _tensors))
 
 
-def dump(path, image, limbs_index, limbs, parts):
-    path = os.path.expanduser(os.path.expandvars(path))
-    tf.logging.warn('dump feature map into ' + path)
-    os.makedirs(path, exist_ok=True)
-    np.savetxt(os.path.join(path, 'limbs_index.tsv'), limbs_index, fmt='%d', delimiter='\t')
-    scipy.misc.imsave(os.path.join(path, 'image.jpg'), image)
-    np.save(os.path.join(path, 'limbs.npy'), limbs)
-    np.save(os.path.join(path, 'parts.npy'), parts)
-
-
 def main():
     matplotlib.rcParams.update({'font.size': args.fontsize})
     logdir = utils.get_logdir(config)
     _, num_parts = utils.get_dataset_mappers(config)
+    symmetric_parts = utils.get_symmetric_parts(config)
     limbs_index = utils.get_limbs_index(config)
     height, width = config.getint('config', 'height'), config.getint('config', 'width')
     with tf.Session() as sess:
@@ -106,9 +88,7 @@ def main():
         if os.path.isfile(path):
             image_rgb, image_resized = read_image(path, height, width)
             _limbs, _parts = eval_tensor(sess, image, image_resized, [limbs, parts])
-            if args.dump:
-                dump(args.dump, image_resized, limbs_index, _limbs, _parts)
-            estimate(config, image_rgb, limbs_index, _limbs, _parts)
+            estimate(config, image_rgb, symmetric_parts, limbs_index, _limbs, _parts)
             plt.show()
         else:
             for dirpath, _, filenames in os.walk(path):
@@ -118,7 +98,7 @@ def main():
                         print(_path)
                         image_rgb, image_resized = read_image(_path, height, width)
                         _limbs, _parts = eval_tensor(sess, image, image_resized, [limbs, parts])
-                        estimate(config, image_rgb, limbs_index, _limbs, _parts)
+                        estimate(config, image_rgb, symmetric_parts, limbs_index, _limbs, _parts)
                         plt.show()
 
 
@@ -127,8 +107,6 @@ def make_args():
     parser.add_argument('path', help='input image path')
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
     parser.add_argument('-e', '--exts', nargs='+', default=['.jpg', '.png'])
-    parser.add_argument('-d', '--dump', help='folder path of feature map dump file')
-    parser.add_argument('-s', '--show')
     parser.add_argument('--level', default='info', help='logging level')
     parser.add_argument('--fontsize', default=7, type=int)
     return parser.parse_args()

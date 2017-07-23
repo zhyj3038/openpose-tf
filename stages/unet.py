@@ -118,7 +118,7 @@ class Unet3Sqz3_1(Stages):
         Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
 
 
-# 6.3M
+# 5.8M
 class Unet3Sqz3_2(Stages):
     def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[1.9, 1.6, 1.3], sqz=3, sqz0=0):
         Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)

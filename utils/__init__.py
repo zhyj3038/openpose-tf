@@ -56,6 +56,24 @@ def get_dataset_mappers(config):
     return mappers, size
 
 
+def get_symmetric_parts(config):
+    dataset = os.path.expanduser(os.path.expandvars(config.get('cache', 'dataset')))
+    with open(dataset + '.txt', 'r') as f:
+        symmetric_parts = [list(map(int, line.rstrip().split())) for line in f]
+    for i, symmetric in enumerate(symmetric_parts):
+        for j in symmetric:
+            assert i != j
+    assert len(symmetric_parts) == get_dataset_mappers(config)[1]
+    return symmetric_parts
+
+
+def get_limbs_index(config):
+    dataset = os.path.expanduser(os.path.expandvars(config.get('cache', 'dataset')))
+    limbs_index = np.loadtxt(dataset + '.tsv', dtype=np.int, delimiter='\t')
+    assert pyopenpose.limbs_points(limbs_index) == get_dataset_mappers(config)[1]
+    return limbs_index
+
+
 def get_cachedir(config):
     basedir = os.path.expanduser(os.path.expandvars(config.get('cache', 'basedir')))
     dataset = os.path.basename(config.get('cache', 'dataset'))
@@ -68,13 +86,6 @@ def get_logdir(config):
     backbone = os.path.splitext(config.get('backbone', 'dnn'))[-1][1:]
     stages = os.path.splitext(config.get('stages', 'dnn'))[-1][1:]
     return os.path.join(basedir, 'logdir', dataset, backbone, stages)
-
-
-def get_limbs_index(config):
-    dataset = os.path.expanduser(os.path.expandvars(config.get('cache', 'dataset')))
-    limbs_index = np.loadtxt(dataset + '.tsv', dtype=np.int, delimiter='\t')
-    assert pyopenpose.limbs_points(limbs_index) == get_dataset_mappers(config)[1]
-    return limbs_index
 
 
 def parse_attr(s):
