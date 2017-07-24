@@ -41,7 +41,7 @@ def summary_scalar(config):
             if len(t.get_shape()) > 0:
                 t = reduce(t)
                 tf.logging.warn(name + ' is not a scalar tensor, reducing by ' + reduce.__name__)
-            tf.summary.scalar(name, t)
+            tf.summary.scalar(name + '_summary', t)
             tf.logging.warn('add summary scalar ' + name)
     except (configparser.NoSectionError, configparser.NoOptionError):
         tf.logging.warn(inspect.stack()[0][3] + ' disabled')
@@ -58,12 +58,12 @@ def summary_image(config):
             if len(shape) == 4:
                 channels = shape[-1]
                 if channels not in (1, 3, 4):
-                    with tf.name_scope(name):
+                    with tf.name_scope(name + '_summary'):
                         for c in range(channels):
                             _t = t[:, :, :, c:c + 1]
                             tf.summary.image('c%d' % c, _t, image_max)
                 else:
-                    tf.summary.image(name, t, image_max)
+                    tf.summary.image(name + '_summary', t, image_max)
                 tf.logging.warn('add summary image ' + name)
             else:
                 tf.logging.warn('rank of %s is not 4' % name)
@@ -77,7 +77,7 @@ def summary_histogram(config):
             patterns = filter(lambda pattern: pattern[0] != '#', map(lambda line: line.strip(), f.readlines()))
         for t in utils.match_tensor(patterns):
             name = t.op.name
-            tf.summary.histogram(name, t)
+            tf.summary.histogram(name + '_summary', t)
             tf.logging.warn('add summary histogram ' + name)
     except (configparser.NoSectionError, configparser.NoOptionError):
         tf.logging.warn(inspect.stack()[0][3] + ' disabled')
