@@ -36,7 +36,6 @@ def main():
     num_examples = sum(sum(1 for _ in tf.python_io.tf_record_iterator(path)) for path in paths)
     tf.logging.warn('num_examples=%d' % num_examples)
     threshold = config.getfloat('nms', 'threshold')
-    radius = config.getint('nms', 'radius')
     with tf.Session() as sess:
         data = utils.data.load_data(config, paths, height, width, feature_height, feature_width, num_parts, limbs_index)
         tf.global_variables_initializer().run()
@@ -63,8 +62,8 @@ def main():
                 limb1, limb2 = np.transpose(_limbs, [2, 0, 1])
                 axes[1, 0].imshow(scipy.misc.imresize(limb1, image.shape[:2]), vmin=vmin, vmax=vmax, alpha=args.alpha)
                 axes[1, 1].imshow(scipy.misc.imresize(limb2, image.shape[:2]), vmin=vmin, vmax=vmax, alpha=args.alpha)
-                peaks1 = pyopenpose.feature_peaks(parts[:, :, i1], threshold, radius)
-                peaks2 = pyopenpose.feature_peaks(parts[:, :, i2], threshold, radius)
+                peaks1 = pyopenpose.feature_peaks(parts[:, :, i1], threshold)
+                peaks2 = pyopenpose.feature_peaks(parts[:, :, i2], threshold)
                 for ax in axes[1]:
                     """
                     for points in keypoints:

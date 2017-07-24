@@ -82,8 +82,8 @@ def load_data(config, paths, height, width, feature_height, feature_width, num_p
         image, mask, keypoints = data_augmentation(config, image, mask, keypoints, width)
         image = tf.clip_by_value(image, 0, 255)
         mask = tf.to_float(mask > 127)
-    sigma_parts = config.getfloat('label', 'sigma_parts')
-    sigma_limbs = config.getfloat('label', 'sigma_limbs')
+    sigma_parts = config.getfloat('label', 'sigma_parts') * max(feature_height, feature_width)
+    sigma_limbs = config.getfloat('label', 'sigma_limbs') * max(feature_height, feature_width)
     limbs, parts = __ops__.label([height, width], [feature_height, feature_width], keypoints, limbs_index, sigma_parts, sigma_limbs)
     assert limbs.get_shape().as_list()[:-1] == [feature_height, feature_width]
     assert parts.get_shape().as_list()[:-1] == [feature_height, feature_width]

@@ -32,13 +32,13 @@ import pyopenpose
 
 def estimate(config, image, symmetric_parts, limbs_index, limbs, parts):
     threshold = config.getfloat('nms', 'threshold')
-    radius = config.getint('nms', 'radius')
+    radius_scale = config.getfloat('cluster', 'radius_scale')
     steps = config.getint('integration', 'steps')
     min_score = config.getfloat('integration', 'min_score')
     min_count = config.getint('integration', 'min_count')
     cluster_min_score = config.getfloat('cluster', 'min_score')
     cluster_min_count = config.getint('cluster', 'min_count')
-    clusters = pyopenpose.estimate(symmetric_parts, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count, cluster_min_score, cluster_min_count)
+    clusters = pyopenpose.estimate(radius_scale, symmetric_parts, limbs_index, limbs, parts, threshold, steps, min_score, min_count, cluster_min_score, cluster_min_count)
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)

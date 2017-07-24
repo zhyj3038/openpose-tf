@@ -46,12 +46,12 @@ def dump(path, image, symmetric_parts, limbs_index, limbs, parts):
     np.save(os.path.join(path, 'parts.npy'), parts)
 
 
-def debug_nms(root, image, parts, threshold, radius, alpha=0.5):
+def debug_nms(root, image, parts, threshold, alpha=0.5):
     os.makedirs(root, exist_ok=True)
     scale_y, scale_x = utils.preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
     maxsize = max(image.shape[:2])
     for index, feature in enumerate(np.transpose(parts, [2, 0, 1])):
-        peaks = pyopenpose.feature_peaks(feature, threshold, radius)
+        peaks = pyopenpose.feature_peaks(feature, threshold)
         fig = plt.figure()
         ax = fig.gca()
         ax.imshow(image)
@@ -62,7 +62,7 @@ def debug_nms(root, image, parts, threshold, radius, alpha=0.5):
         ax.set_title('%d points' % len(peaks))
         fig.savefig(os.path.join(root, 'part%03d' % index) + args.ext)
         plt.close(fig)
-    peaks = pyopenpose.featuremap_peaks(parts, threshold, radius)
+    peaks = pyopenpose.featuremap_peaks(parts, threshold)
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)
@@ -74,10 +74,10 @@ def debug_nms(root, image, parts, threshold, radius, alpha=0.5):
     plt.close(fig)
 
 
-def debug_connection(root, image, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count, alpha=0.5, linewidth=10):
+def debug_connection(root, image, radius_scale, symmetric_parts, limbs_index, limbs, parts, threshold, steps, min_score, min_count, alpha=0.5, linewidth=10):
     os.makedirs(root, exist_ok=True)
     scale_y, scale_x = utils.preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
-    peaks = pyopenpose.featuremap_peaks(parts, threshold, radius)
+    peaks = pyopenpose.featuremap_peaks(parts, threshold)
     assert len(peaks) == parts.shape[-1]
     _limbs = np.reshape(limbs, limbs.shape[:2] + (-1, 2))
     _limbs = np.transpose(_limbs, [2, 3, 0, 1])
@@ -96,7 +96,7 @@ def debug_connection(root, image, limbs_index, limbs, parts, threshold, radius, 
                     ax.text(x, y, '%d_%d' % (i, j) if i in (i1, i2) else str(i), bbox=dict(facecolor='r' if i == i1 else 'g' if i == i2 else 'w', alpha=alpha), ha='center', va='center')
         peaks1 = peaks[i1]
         peaks2 = peaks[i2]
-        connections = pyopenpose.calc_limb_score(index * 2, limbs, peaks1, peaks2, steps, min_score, min_count)
+        connections = pyopenpose.calc_limb_score(index * 2, limbs, peaks1, peaks2, steps, min_score, min_count, radius_scale)
         for ax in axes[:2]:
             for p1, p2, score in connections:
                 y1, x1, _ = peaks1[p1]
@@ -105,7 +105,7 @@ def debug_connection(root, image, limbs_index, limbs, parts, threshold, radius, 
                 y2, x2 = y2 * scale_y, x2 * scale_x
                 ax.plot([x1, x2], [y1, y2])
         if min_score > 0 and min_count > 0:
-            pyopenpose.filter_connections(connections, len(peaks1), len(peaks2))
+            pyopenpose.filter_connections(connections, peaks1, peaks2, peaks, symmetric_parts[i1], symmetric_parts[i2], radius_scale)
         max_score = max(connections, key=lambda item: item[-1])[-1] if connections else 0
         ax = axes[-1]
         for p1, p2, score in connections:
@@ -130,11 +130,11 @@ def debug_connection(root, image, limbs_index, limbs, parts, threshold, radius, 
             plt.close(fig)
 
 
-def debug_clusters(root, image, symmetric_parts, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count, linewidth=10):
+def debug_clusters(root, image, radius_scale, symmetric_parts, limbs_index, limbs, parts, threshold, steps, min_score, min_count, linewidth=10):
     scale_y, scale_x = utils.preprocess.calc_image_scale(parts.shape[:2], image.shape[:2])
-    peaks = pyopenpose.featuremap_peaks(parts, threshold, radius)
+    peaks = pyopenpose.featuremap_peaks(parts, threshold)
     assert len(peaks) == parts.shape[-1]
-    clusters = pyopenpose.clustering(radius, symmetric_parts, limbs_index, limbs, peaks, steps, min_score, min_count)
+    clusters = pyopenpose.clustering(radius_scale, symmetric_parts, limbs_index, limbs, peaks, steps, min_score, min_count)
     fig = plt.figure()
     ax = fig.gca()
     ax.imshow(image)
@@ -161,20 +161,20 @@ def debug_clusters(root, image, symmetric_parts, limbs_index, limbs, parts, thre
 
 def debug(config, root, image, symmetric_parts, limbs_index, limbs, parts):
     threshold = config.getfloat('nms', 'threshold')
-    radius = config.getint('nms', 'radius')
+    radius_scale = config.getfloat('cluster', 'radius_scale')
     steps = config.getint('integration', 'steps')
     min_score = config.getfloat('integration', 'min_score')
     min_count = config.getint('integration', 'min_count')
     if args.nms:
         tf.logging.info('debug NMS')
-        debug_nms(os.path.join(root, 'nms'), image, parts, threshold, radius)
+        debug_nms(os.path.join(root, 'nms'), image, parts, threshold)
     if args.limbs:
         tf.logging.info('debug score')
-        debug_connection(os.path.join(root, 'score'), image, limbs_index, limbs, parts, threshold, radius, steps, 0, 1)
+        debug_connection(os.path.join(root, 'score'), image, radius_scale, symmetric_parts, limbs_index, limbs, parts, threshold, steps, 0, 1)
         tf.logging.info('debug connection')
-        debug_connection(os.path.join(root, 'connection'), image, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count)
+        debug_connection(os.path.join(root, 'connection'), image, radius_scale, symmetric_parts, limbs_index, limbs, parts, threshold, steps, min_score, min_count)
     tf.logging.info('debug clusters')
-    debug_clusters(os.path.join(root, 'clusters'), image, symmetric_parts, limbs_index, limbs, parts, threshold, radius, steps, min_score, min_count)
+    debug_clusters(os.path.join(root, 'clusters'), image, radius_scale, symmetric_parts, limbs_index, limbs, parts, threshold, steps, min_score, min_count)
     fig = estimate(config, image, symmetric_parts, limbs_index, limbs, parts)
     fig.savefig(os.path.join(root, 'estimate') + args.ext)
     plt.close(fig)
