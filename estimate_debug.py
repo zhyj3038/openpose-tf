@@ -187,14 +187,20 @@ def main():
     symmetric_parts = utils.get_symmetric_parts(config)
     limbs_index = utils.get_limbs_index(config)
     height, width = config.getint('config', 'height'), config.getint('config', 'width')
-    with tf.Session() as sess:
-        image = tf.placeholder(tf.float32, [1, height, width, 3], name='image')
-        net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
+    image = tf.placeholder(tf.float32, [1, height, width, 3], name='image')
+    net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
+    with tf.variable_scope('stages'):
         stages = utils.parse_attr(config.get('stages', 'dnn'))(config, len(limbs_index), num_parts)
-        limbs, parts = stages(net)
-        limbs = tf.check_numerics(limbs, limbs.op.name)
-        parts = tf.check_numerics(parts[:, :, :, :-1], parts.op.name) # drop background channel
-        tf.logging.info(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) * var.dtype.size for var in tf.global_variables())))
+        try:
+            count = config.getint('stages', 'count')
+        except configparser.NoOptionError:
+            count = stages.count
+        for _ in range(count):
+            limbs, parts = stages(net)
+    limbs = tf.check_numerics(limbs, limbs.op.name)
+    parts = tf.check_numerics(parts[:, :, :, :-1], parts.op.name) # drop background channel
+    tf.logging.info(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) * var.dtype.size for var in tf.global_variables())))
+    with tf.Session() as sess:
         tf.logging.info('locating checkpoint in ' + logdir)
         checkpoint_path = tf.train.latest_checkpoint(logdir)
         tf.logging.info('load ' + checkpoint_path)

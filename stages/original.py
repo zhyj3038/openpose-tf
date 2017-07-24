@@ -20,11 +20,12 @@ import stages
 
 
 class Stages(stages.Stages):
-    def __init__(self, num_limbs, num_parts, stages=6):
-        super(Stages, self).__init__(num_limbs, num_parts, stages)
+    def __init__(self, num_limbs, num_parts):
+        super(Stages, self).__init__(num_limbs, num_parts)
+        self.count = 6
     
-    def stage(self, stage, net, channels, train):
-        if stage > 0:
+    def stage(self, net, channels):
+        if self.index > 0:
             with slim.arg_scope([slim.conv2d], num_outputs=128, kernel_size=[3, 3]):
                 for index in range(3):
                     net = slim.conv2d(net, scope='conv%d' % index)

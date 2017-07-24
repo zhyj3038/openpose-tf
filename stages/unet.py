@@ -22,20 +22,22 @@ import stages
 
 
 class Stages(stages.Stages):
-    def __init__(self, num_limbs, num_parts, stages=2, multiply=[2, 2], sqz=0, sqz0=0):
-        super(Stages, self).__init__(num_limbs, num_parts, stages)
-        self.multiply = multiply
-        self.sqz = sqz
-        self.sqz0 = sqz0
+    def __init__(self, num_limbs, num_parts):
+        super(Stages, self).__init__(num_limbs, num_parts)
+        self.count = 2
+        self.multiply = [2, 2]
+        self.sqz = []
+        self.sqz0 = []
     
-    def stage_branches(self, stage, _input, train):
-        if stage > 0 and self.sqz0 > 1:
-            channels = sum(map(operator.itemgetter(1), self.branches))
-            c = max(_input.get_shape()[-1].value // self.sqz0, channels)
-            _input = slim.conv2d(_input, c, kernel_size=[1, 1], scope='sqz')
-        return super(Stages, self).stage_branches(stage, _input, train)
+    def stage_branches(self, _input):
+        if self.index > 0:
+            for sqz in self.sqz0:
+                channels = sum(map(operator.itemgetter(1), self.branches))
+                c = max(int(_input.get_shape()[-1].value * sqz), channels)
+                _input = slim.conv2d(_input, c, kernel_size=[1, 1], scope='sqz')
+        return super(Stages, self).stage_branches(_input)
     
-    def stage(self, stage, net, channels, train):
+    def stage(self, net, channels):
         _channels = channels
         with slim.arg_scope([slim.conv2d], kernel_size=[3, 3]), slim.arg_scope([slim.max_pool2d], kernel_size=[2, 2]), slim.arg_scope([slim.conv2d_transpose], kernel_size=[2, 2], stride=2, padding='VALID'):
             nets = []
@@ -59,8 +61,8 @@ class Stages(stages.Stages):
                         size = [-1, height, width, _channels]
                         _net = tf.slice(_net, offsets, size, name='center_crop')
                     net = tf.concat([net, _net], -1)
-                    if self.sqz > 1:
-                        c = max(net.get_shape()[-1].value // self.sqz, channels)
+                    for sqz in self.sqz:
+                        c = max(int(net.get_shape()[-1].value * sqz), channels)
                         net = slim.conv2d(net, c, kernel_size=[1, 1], scope='sqz')
                     net = slim.conv2d(net, _channels)
         return slim.conv2d(net, channels, kernel_size=[1, 1], activation_fn=None)
@@ -68,57 +70,69 @@ class Stages(stages.Stages):
 
 # 4.1M
 class Unet2(Stages):
-    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2], sqz=0, sqz0=0):
-        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
 
 
 # M
 class Unet2_1(Stages):
-    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 1.5], sqz=0, sqz0=0):
-        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.multiply = [2, 1.5]
 
 
 # 2.7M
 class Unet2_2(Stages):
-    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[1.5, 1.5], sqz=0, sqz0=0):
-        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.multiply = [1.5, 1.5]
 
 
 # 3.4M
 class Unet2Sqz3(Stages):
-    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2], sqz=3, sqz0=0):
-        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.sqz = [1 / 3]
 
 
 # 13.4M
 class Unet3(Stages):
-    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2, 2], sqz=0, sqz0=0):
-        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.multiply = [2, 2, 2]
 
 
 # 10.6M
 class Unet3_1(Stages):
-    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2, 1], sqz=0, sqz0=0):
-        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.multiply = [2, 2, 1]
 
 
 class Unet3_2(Stages):
-    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 1.5, 1], sqz=0, sqz0=0):
-        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.multiply = [2, 1.5, 1]
 
 
 # 10.5M
 class Unet3Sqz3(Stages):
-    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2, 2], sqz=3, sqz0=0):
-        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.multiply = [2, 2, 2]
+        self.sqz = [1 / 3]
 
 
 class Unet3Sqz3_1(Stages):
-    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[2, 2, 1], sqz=3, sqz0=0):
-        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.multiply = [2, 2, 1]
+        self.sqz = [1 / 3]
 
 
 # 5.8M
 class Unet3Sqz3_2(Stages):
-    def __init__(self, config, num_limbs, num_parts, stages=2, multiply=[1.9, 1.6, 1.3], sqz=3, sqz0=0):
-        Stages.__init__(self, num_limbs, num_parts, stages, multiply, sqz, sqz0)
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.multiply = [1.9, 1.6, 1.3]
+        self.sqz = [1 / 3]

@@ -27,6 +27,7 @@ from PyQt4 import QtCore, QtGui
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg, NavigationToolbar2QT
+import humanize
 import cv2
 import utils.preprocess
 
@@ -141,11 +142,18 @@ def main():
     _, num_parts = utils.get_dataset_mappers(config)
     limbs_index = utils.get_limbs_index(config)
     height, width = config.getint('config', 'height'), config.getint('config', 'width')
-    with tf.Session() as sess:
-        image = tf.placeholder(tf.float32, [1, height, width, 3], name='image')
-        net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
+    image = tf.placeholder(tf.float32, [1, height, width, 3], name='image')
+    net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
+    with tf.variable_scope('stages'):
         stages = utils.parse_attr(config.get('stages', 'dnn'))(config, len(limbs_index), num_parts)
-        stages(net)
+        try:
+            count = config.getint('stages', 'count')
+        except configparser.NoOptionError:
+            count = stages.count
+        for _ in range(count):
+            stages(net)
+    tf.logging.info(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) * var.dtype.size for var in tf.global_variables())))
+    with tf.Session() as sess:
         tf.logging.info('locating checkpoint in ' + logdir)
         checkpoint_path = tf.train.latest_checkpoint(logdir)
         tf.logging.info('load ' + checkpoint_path)

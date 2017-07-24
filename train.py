@@ -138,9 +138,17 @@ def main():
             image, mask, limbs, parts = tf.identity(image, 'image'), tf.identity(mask, 'mask'), tf.identity(limbs, 'limbs'), tf.identity(parts, 'parts')
     net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
     assert tuple(net.get_shape().as_list()[1:3]) == (feature_height, feature_width), str(net.get_shape().as_list()[1:3]) + ' != ' + str([feature_height, feature_width])
-    stages = utils.parse_attr(config.get('stages', 'dnn'))(config, len(limbs_index), num_parts)
-    stages(net, train=True)
-    stages.loss(mask, limbs, parts)
+    with tf.variable_scope('stages'):
+        stages = utils.parse_attr(config.get('stages', 'dnn'))(config, len(limbs_index), num_parts)
+        stages.train = True
+        try:
+            count = config.getint('stages', 'count')
+        except configparser.NoOptionError:
+            count = stages.count
+        for _ in range(count):
+            stages(net)
+    with tf.name_scope('loss_stages'):
+        stages.loss(mask, limbs, parts)
     tf.logging.warn(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) * var.dtype.size for var in tf.global_variables())))
     with tf.name_scope('total_loss') as name:
         total_loss = tf.losses.get_total_loss(name=name)

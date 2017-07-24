@@ -20,52 +20,51 @@ import tensorflow as tf
 
 
 class Stages(list):
-    def __init__(self, num_limbs, num_parts, stages, scope='stages'):
+    def __init__(self, num_limbs, num_parts):
         self.branches = [('limbs', num_limbs * 2), ('parts', num_parts + 1)]
-        self.stages = stages
-        self.scope = scope
+        self.train = False
+        self.outputs = []
+        self.index = 0
     
-    def __call__(self, net, train=False):
-        self.clear()
-        with tf.variable_scope(self.scope):
-            image = tf.identity(net, 'image')
-            outputs = [image]
-            for stage in range(self.stages):
-                with tf.variable_scope('stage%d' % stage):
-                    if len(outputs) == 1:
-                        _input = tf.identity(outputs[0], 'input')
-                    else:
-                        assert len(outputs) == len(self.branches)
-                        _input = tf.concat(outputs + [image], -1, name='input')
-                    outputs = self.stage_branches(stage, _input, train)
-                    self.append(outputs)
-        return tuple([tf.identity(net, branch) for net, (branch, _) in zip(outputs, self.branches)])
+    def __call__(self, net):
+        if not self.outputs:
+            self.image = tf.identity(net, 'image')
+            self.outputs = [self.image]
+        with tf.variable_scope('stage%d' % self.index):
+            if len(self.outputs) == 1:
+                _input = tf.identity(self.outputs[0], 'input')
+            else:
+                assert len(self.outputs) == len(self.branches)
+                _input = tf.concat(self.outputs + [self.image], -1, name='input')
+            self.outputs = self.stage_branches(_input)
+            self.append(self.outputs)
+            self.index += 1
+        return self.outputs
     
-    def stage_branches(self, stage, net, train):
+    def stage_branches(self, net):
         outputs = []
         for branch, channels in self.branches:
-            outputs.append(self.stage_branch(stage, net, channels, train, branch))
+            outputs.append(self.stage_branch(net, channels, branch))
         return outputs
     
-    def stage_branch(self, stage, net, channels, train, scope):
+    def stage_branch(self, net, channels, scope):
         with tf.variable_scope(scope):
             net = tf.identity(net, 'input')
-            net = self.stage(stage, net, channels, train)
+            net = self.stage(net, channels)
             return tf.identity(net, 'output')
     
-    def stage(self, net, channels, train):
+    def stage(self, net, channels):
         pass
     
     def loss(self, mask, limbs, parts):
-        with tf.name_scope('loss_' + self.scope):
-            with tf.name_scope('labels'):
-                mask = tf.identity(mask, 'mask')
-                limbs = tf.identity(limbs, 'limbs')
-                parts = tf.identity(parts, 'parts')
-            for stage, (_limbs, _parts) in enumerate(self):
-                with tf.variable_scope('stage%d' % stage):
-                    make_loss(_limbs, mask, limbs, 'limbs')
-                    make_loss(_parts, mask, parts, 'parts')
+        with tf.name_scope('labels'):
+            mask = tf.identity(mask, 'mask')
+            limbs = tf.identity(limbs, 'limbs')
+            parts = tf.identity(parts, 'parts')
+        for stage, (_limbs, _parts) in enumerate(self):
+            with tf.variable_scope('stage%d' % stage):
+                make_loss(_limbs, mask, limbs, 'limbs')
+                make_loss(_parts, mask, parts, 'parts')
 
 
 def make_loss(net, mask, label, scope=None):

@@ -48,8 +48,14 @@ def main():
     height, width = config.getint('config', 'height'), config.getint('config', 'width')
     image = tf.placeholder(tf.float32, [1, height, width, 3], name='image')
     net = utils.parse_attr(config.get('backbone', 'dnn'))(config, image, train=True)
-    stages = utils.parse_attr(config.get('stages', 'dnn'))(config, len(limbs_index), num_parts)
-    stages(net)
+    with tf.variable_scope('stages'):
+        stages = utils.parse_attr(config.get('stages', 'dnn'))(config, len(limbs_index), num_parts)
+        try:
+            count = config.getint('stages', 'count')
+        except configparser.NoOptionError:
+            count = stages.count
+        for _ in range(count):
+            stages(net)
     tf.logging.warn(humanize.naturalsize(sum(np.multiply.reduce(var.get_shape().as_list()) * var.dtype.size for var in tf.global_variables())))
     if not args.nohead:
         print('\t'.join(['index'] + [name for name, _ in analyze if name[0] != '_']))
