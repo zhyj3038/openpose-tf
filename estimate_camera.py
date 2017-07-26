@@ -78,8 +78,8 @@ def main():
                 y2, x2 = int(y2 * scale_y), int(x2 * scale_x)
                 cv2.line(image, (x1, y1), (x2, y2), color, 3)
                 if args.part:
-                    cv2.putText(image, str(i1), (x1, y1), font, 1, (255,255,255), 2)
-                    cv2.putText(image, str(i2), (x2, y2), font, 1, (255,255,255), 2)
+                    cv2.putText(image, str(i1), (x1, y1), font, 1, (255, 255, 255), 2)
+                    cv2.putText(image, str(i2), (x2, y2), font, 1, (255, 255, 255), 2)
     
     with tf.Session() as sess:
         tf.logging.info('locating checkpoint in ' + logdir)
