@@ -325,64 +325,59 @@ inception_v4.default_image_size = 299
 
 inception_v4_arg_scope = inception_utils.inception_arg_scope
 
-def inception4_3(config, inputs, train=True, reuse=None, scope='InceptionV4'):
-  """Creates the Inception V4 model.
 
-  Args:
-    inputs: a 4-D tensor of size [batch_size, height, width, 3].
-    num_classes: number of predicted classes.
-    is_training: whether is training or not.
-    dropout_keep_prob: float, the fraction to keep before final layer.
-    reuse: whether or not the network and its variables should be reused. To be
-      able to reuse 'scope' must be given.
-    scope: Optional variable_scope.
-    create_aux_logits: Whether to include the auxiliary logits.
-
-  Returns:
-    logits: the logits outputs of the model.
-    end_points: the set of end_points from the inception model.
-  """
-  end_points = {}
-  with tf.variable_scope(scope, 'InceptionV4', [inputs], reuse=reuse) as scope:
-    with slim.arg_scope([slim.batch_norm, slim.dropout],
-                        is_training=train):
-      net, end_points = inception_v4_base(inputs, 'Mixed_5e', scope=scope)
-    return net
-
-
-def inception4_3_downsampling(height, width):
+def down3_downsampling(height, width):
     downsample = 3
     return height // 2 ** downsample - downsample, width // 2 ** downsample - downsample
 
-def inception4_4(config, inputs, train=True, reuse=None, scope='InceptionV4'):
-  """Creates the Inception V4 model.
-
-  Args:
-    inputs: a 4-D tensor of size [batch_size, height, width, 3].
-    num_classes: number of predicted classes.
-    is_training: whether is training or not.
-    dropout_keep_prob: float, the fraction to keep before final layer.
-    reuse: whether or not the network and its variables should be reused. To be
-      able to reuse 'scope' must be given.
-    scope: Optional variable_scope.
-    create_aux_logits: Whether to include the auxiliary logits.
-
-  Returns:
-    logits: the logits outputs of the model.
-    end_points: the set of end_points from the inception model.
-  """
-  end_points = {}
-  with tf.variable_scope(scope, 'InceptionV4', [inputs], reuse=reuse) as scope:
-    with slim.arg_scope([slim.batch_norm, slim.dropout],
-                        is_training=train):
-      net, end_points = inception_v4_base(inputs, 'Mixed_6h', scope=scope)
+def down3_4(config, inputs, train=True, reuse=None, scope='InceptionV4'):
+    global shrink0
+    global shrink
+    shrink0 = 1
+    shrink = 4
+    with tf.variable_scope(scope, 'InceptionV4', [inputs], reuse=reuse) as scope:
+        with slim.arg_scope([slim.batch_norm, slim.dropout], is_training=train):
+            net, _ = inception_v4_base(inputs, 'Mixed_5e', scope=scope)
     return net
 
 
-def inception4_4_downsampling(height, width):
+def down3_4_downsampling(height, width):
+    return down3_downsampling(height, width)
+
+def down3_8(config, inputs, train=True, reuse=None, scope='InceptionV4'):
+    global shrink0
+    global shrink
+    shrink0 = 2
+    shrink = 8
+    with tf.variable_scope(scope, 'InceptionV4', [inputs], reuse=reuse) as scope:
+        with slim.arg_scope([slim.batch_norm, slim.dropout], is_training=train):
+            net, _ = inception_v4_base(inputs, 'Mixed_5e', scope=scope)
+    return net
+
+
+def down3_8_downsampling(height, width):
+    return down3_downsampling(height, width)
+
+
+def down4_downsampling(height, width):
     query = {522: 30, 554: 32}
     try:
         return query[height], query[width]
     except KeyError:
         downsample = 4
         return height // 2 ** downsample // 10 * 10, width // 2 ** downsample // 10 * 10
+
+
+def down4_4(config, inputs, train=True, reuse=None, scope='InceptionV4'):
+    global shrink0
+    global shrink
+    shrink0 = 1
+    shrink = 4
+    with tf.variable_scope(scope, 'InceptionV4', [inputs], reuse=reuse) as scope:
+        with slim.arg_scope([slim.batch_norm, slim.dropout], is_training=train):
+            net, _ = inception_v4_base(inputs, 'Mixed_6h', scope=scope)
+    return net
+
+
+def down4_4_downsampling(height, width):
+    return down4_downsampling(height, width)

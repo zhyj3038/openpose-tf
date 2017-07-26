@@ -83,8 +83,8 @@ def get_cachedir(config):
 def get_logdir(config):
     basedir = os.path.expanduser(os.path.expandvars(config.get('cache', 'basedir')))
     dataset = os.path.basename(config.get('cache', 'dataset'))
-    backbone = os.path.splitext(config.get('backbone', 'dnn'))[-1][1:]
-    stages = os.path.splitext(config.get('stages', 'dnn'))[-1][1:]
+    backbone = config.get('backbone', 'dnn')
+    stages = config.get('stages', 'dnn')
     return os.path.join(basedir, 'logdir', dataset, backbone, stages)
 
 

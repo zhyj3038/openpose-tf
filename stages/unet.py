@@ -51,10 +51,9 @@ class Stages(stages.Stages):
             net = slim.conv2d(net, _channels, scope='conv%d' % len(nets))
             for index, _net in nets[::-1]:
                 with tf.variable_scope('up%d' % index):
-                    _channels = _net.get_shape()[-1].value
+                    _, _height, _width, _channels = _net.get_shape().as_list()
                     net = slim.conv2d_transpose(net, _channels)
                     _, height, width, _ = net.get_shape().as_list()
-                    _, _height, _width, _ = _net.get_shape().as_list()
                     assert height <= _height
                     assert width <= _width
                     if height != _height or width != _width:
@@ -62,9 +61,9 @@ class Stages(stages.Stages):
                         size = [-1, height, width, _channels]
                         _net = tf.slice(_net, offsets, size, name='center_crop')
                     net = tf.concat([net, _net], -1)
+                    c = net.get_shape()[-1].value
                     for sqz in self.sqz:
-                        c = max(int(net.get_shape()[-1].value * sqz), channels)
-                        net = slim.conv2d(net, c, kernel_size=[1, 1], scope='sqz')
+                        net = slim.conv2d(net, max(int(c * sqz), channels), kernel_size=[1, 1], scope='sqz')
                     net = slim.conv2d(net, _channels)
         return slim.conv2d(net, channels, kernel_size=[1, 1], activation_fn=None)
 
@@ -96,7 +95,7 @@ class Unet2Sqz3(Stages):
         self.sqz = [1 / 3]
 
 
-# M
+# 2.2M
 class Unet2Sqz3_1(Stages):
     def __init__(self, config, num_limbs, num_parts):
         Stages.__init__(self, num_limbs, num_parts)
