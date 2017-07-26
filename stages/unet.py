@@ -29,13 +29,14 @@ class Stages(stages.Stages):
         self.sqz = []
         self.sqz0 = []
     
-    def stage_branches(self, _input):
-        if self.index > 0:
+    def stage_branches(self, net):
+        _channels = net.get_shape()[-1].value
+        channels = sum(map(operator.itemgetter(1), self.branches))
+        if _channels > channels:
             for i, sqz in enumerate(self.sqz0):
-                channels = sum(map(operator.itemgetter(1), self.branches))
-                c = max(int(_input.get_shape()[-1].value * sqz), channels)
-                _input = slim.conv2d(_input, c, kernel_size=[1, 1], scope='sqz%d' % i)
-        return super(Stages, self).stage_branches(_input)
+                c = max(int(_channels * sqz), channels)
+                net = slim.conv2d(net, c, kernel_size=[1, 1], scope='sqz%d' % i)
+        return super(Stages, self).stage_branches(net)
     
     def stage(self, net, channels):
         _channels = channels
@@ -92,6 +93,14 @@ class Unet2_2(Stages):
 class Unet2Sqz3(Stages):
     def __init__(self, config, num_limbs, num_parts):
         Stages.__init__(self, num_limbs, num_parts)
+        self.sqz = [1 / 3]
+
+
+# M
+class Unet2Sqz3_1(Stages):
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.multiply = [1.5, 1.2]
         self.sqz = [1 / 3]
 
 

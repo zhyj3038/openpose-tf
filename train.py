@@ -174,11 +174,11 @@ def main():
             clip_gradient_norm=args.gradient_clip, summarize_gradients=config.getboolean('summary', 'gradients'),
             gradient_multipliers=gradient_multipliers
         )
-    variables_to_restore = slim.get_variables_to_restore(exclude=args.exclude)
+    variables = slim.get_variables_to_restore(exclude=args.exclude)
     if args.transfer:
         path = os.path.expanduser(os.path.expandvars(args.transfer))
         tf.logging.warn('transferring from ' + path)
-        init_assign_op, init_feed_dict = slim.assign_from_checkpoint(path, variables_to_restore)
+        init_assign_op, init_feed_dict = slim.assign_from_checkpoint(path, variables)
         def init_fn(sess):
             sess.run(init_assign_op, init_feed_dict)
             tf.logging.warn('transferring from global_step=%d, learning_rate=%f' % sess.run((global_step, learning_rate)))

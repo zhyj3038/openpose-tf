@@ -64,7 +64,8 @@ def main():
             tf.logging.info('locating checkpoint in ' + logdir)
             checkpoint_path = tf.train.latest_checkpoint(logdir)
             tf.logging.info('load ' + checkpoint_path)
-            slim.assign_from_checkpoint_fn(checkpoint_path, tf.global_variables())(sess)
+            variables = slim.get_variables_to_restore()
+            slim.assign_from_checkpoint_fn(checkpoint_path, variables)(sess)
         for index, var in enumerate(tf.global_variables()):
             row = [str(index)]
             cache = {}
