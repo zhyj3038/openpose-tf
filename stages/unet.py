@@ -24,6 +24,7 @@ import stages
 class Stages(stages.Stages):
     def __init__(self, num_limbs, num_parts):
         super(Stages, self).__init__(num_limbs, num_parts)
+        self.interp = False
         self.count = 2
         self.multiply = [2, 2]
         self.sqz = []
@@ -52,14 +53,18 @@ class Stages(stages.Stages):
             for index, _net in nets[::-1]:
                 with tf.variable_scope('up%d' % index):
                     _, _height, _width, _channels = _net.get_shape().as_list()
-                    net = slim.conv2d_transpose(net, _channels)
-                    _, height, width, _ = net.get_shape().as_list()
-                    assert height <= _height
-                    assert width <= _width
-                    if height != _height or width != _width:
-                        offsets = [0, (_height - height) // 2, (_width - width) // 2, 0]
-                        size = [-1, height, width, _channels]
-                        _net = tf.slice(_net, offsets, size, name='center_crop')
+                    if self.interp:
+                        with tf.name_scope('interp%d' % index):
+                            net = tf.image.resize_images(net, _net.get_shape()[1:3])
+                    else:
+                        net = slim.conv2d_transpose(net, _channels)
+                        _, height, width, _ = net.get_shape().as_list()
+                        assert height <= _height
+                        assert width <= _width
+                        if height != _height or width != _width:
+                            offsets = [0, (_height - height) // 2, (_width - width) // 2, 0]
+                            size = [-1, height, width, _channels]
+                            _net = tf.slice(_net, offsets, size, name='center_crop')
                     net = tf.concat([net, _net], -1)
                     c = net.get_shape()[-1].value
                     for sqz in self.sqz:
@@ -92,6 +97,14 @@ class Unet2_2(Stages):
 class Unet2Sqz3(Stages):
     def __init__(self, config, num_limbs, num_parts):
         Stages.__init__(self, num_limbs, num_parts)
+        self.sqz = [1 / 3]
+
+
+# 3.1M
+class UnetI2Sqz3(Stages):
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.interp = True
         self.sqz = [1 / 3]
 
 
