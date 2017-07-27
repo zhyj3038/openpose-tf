@@ -26,11 +26,7 @@ class Stages(stages.Stages):
     
     def stage(self, net, channels):
         if self.index == 0:
-            with slim.arg_scope([slim.conv2d], num_outputs=128, kernel_size=[3, 3]):
-                for index in range(3):
-                    net = slim.conv2d(net, scope='conv%d' % index)
-            index += 1
-            net = slim.conv2d(net, 512, kernel_size=[1, 1], scope='conv%d' % index)
+            net = slim.conv2d(net, 512, kernel_size=[1, 1], scope='conv')
         else:
             with slim.arg_scope([slim.conv2d], num_outputs=128, kernel_size=[7, 7]):
                 for index in range(5):
@@ -40,6 +36,6 @@ class Stages(stages.Stages):
         return slim.conv2d(net, channels, kernel_size=[1, 1], activation_fn=None)
 
 
-class Original(Stages):
+class Stages6(Stages):
     def __init__(self, config, num_limbs, num_parts):
         Stages.__init__(self, num_limbs, num_parts)

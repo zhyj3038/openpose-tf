@@ -21,7 +21,12 @@ import tensorflow as tf
 
 class Stages(list):
     def __init__(self, num_limbs, num_parts):
-        self.branches = [('limbs', num_limbs * 2), ('parts', num_parts + 1)]
+        self.branches = []
+        if num_limbs > 0:
+            self.branches.append(('limbs', num_limbs * 2))
+        if num_parts > 0:
+            self.branches.append(('parts', num_parts + 1))
+        assert self.branches
         self.train = False
         self.outputs = []
         self.index = 0
@@ -29,10 +34,9 @@ class Stages(list):
     def __call__(self, net):
         if not self.outputs:
             self.image = tf.identity(net, 'image')
-            self.outputs = [self.image]
         with tf.variable_scope('stage%d' % self.index):
-            if len(self.outputs) == 1:
-                _input = tf.identity(self.outputs[0], 'input')
+            if not self.outputs:
+                _input = tf.identity(self.image, 'input')
             else:
                 assert len(self.outputs) == len(self.branches)
                 _input = tf.concat(self.outputs + [self.image], -1, name='input')
@@ -44,6 +48,7 @@ class Stages(list):
     def stage_branches(self, net):
         outputs = []
         for branch, channels in self.branches:
+            assert channels > 0
             outputs.append(self.stage_branch(net, channels, branch))
         return outputs
     

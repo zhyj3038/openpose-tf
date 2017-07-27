@@ -1,0 +1,104 @@
+vgg_19/conv1/conv1_1/weights	conv1_1/0	2,3,1,0
+vgg_19/conv1/conv1_1/biases	conv1_1/1	
+vgg_19/conv1/conv1_2/weights	conv1_2/0	2,3,1,0
+vgg_19/conv1/conv1_2/biases	conv1_2/1	
+vgg_19/conv2/conv2_1/weights	conv2_1/0	2,3,1,0
+vgg_19/conv2/conv2_1/biases	conv2_1/1	
+vgg_19/conv2/conv2_2/weights	conv2_2/0	2,3,1,0
+vgg_19/conv2/conv2_2/biases	conv2_2/1	
+vgg_19/conv3/conv3_1/weights	conv3_1/0	2,3,1,0
+vgg_19/conv3/conv3_1/biases	conv3_1/1	
+vgg_19/conv3/conv3_2/weights	conv3_2/0	2,3,1,0
+vgg_19/conv3/conv3_2/biases	conv3_2/1	
+vgg_19/conv3/conv3_3/weights	conv3_3/0	2,3,1,0
+vgg_19/conv3/conv3_3/biases	conv3_3/1	
+vgg_19/conv3/conv3_4/weights	conv3_4/0	2,3,1,0
+vgg_19/conv3/conv3_4/biases	conv3_4/1	
+vgg_19/conv4/conv4_1/weights	conv4_1/0	2,3,1,0
+vgg_19/conv4/conv4_1/biases	conv4_1/1	
+vgg_19/conv4/conv4_2/weights	conv4_2/0	2,3,1,0
+vgg_19/conv4/conv4_2/biases	conv4_2/1	
+vgg_19/conv4/conv4_3/weights	conv4_3/0	2,3,1,0
+vgg_19/conv4/conv4_3/biases	conv4_3/1	
+vgg_19/conv4/conv4_4/weights	conv4_4/0	2,3,1,0
+vgg_19/conv4/conv4_4/biases	conv4_4/1	
+backbone/conv0/weights	conv5_1/0	2,3,1,0
+backbone/conv0/biases	conv5_1/1	
+backbone/conv1/weights	conv5_2/0	2,3,1,0
+backbone/conv1/biases	conv5_2/1	
+backbone/conv2/weights	conv5_3_CPM/0	2,3,1,0
+backbone/conv2/biases	conv5_3_CPM/1	
+stages/stage0/parts/conv/weights	conv6_1_CPM/0	2,3,1,0
+stages/stage0/parts/conv/biases	conv6_1_CPM/1	
+stages/stage0/parts/Conv/weights	conv6_2_CPM/0	2,3,1,0
+stages/stage0/parts/Conv/biases	conv6_2_CPM/1	
+stages/stage1/parts/conv0/weights	Mconv1_stage2/0	2,3,1,0
+stages/stage1/parts/conv0/biases	Mconv1_stage2/1	
+stages/stage1/parts/conv1/weights	Mconv2_stage2/0	2,3,1,0
+stages/stage1/parts/conv1/biases	Mconv2_stage2/1	
+stages/stage1/parts/conv2/weights	Mconv3_stage2/0	2,3,1,0
+stages/stage1/parts/conv2/biases	Mconv3_stage2/1	
+stages/stage1/parts/conv3/weights	Mconv4_stage2/0	2,3,1,0
+stages/stage1/parts/conv3/biases	Mconv4_stage2/1	
+stages/stage1/parts/conv4/weights	Mconv5_stage2/0	2,3,1,0
+stages/stage1/parts/conv4/biases	Mconv5_stage2/1	
+stages/stage1/parts/conv5/weights	Mconv6_stage2/0	2,3,1,0
+stages/stage1/parts/conv5/biases	Mconv6_stage2/1	
+stages/stage1/parts/Conv/weights	Mconv7_stage2/0	2,3,1,0
+stages/stage1/parts/Conv/biases	Mconv7_stage2/1	
+stages/stage2/parts/conv0/weights	Mconv1_stage3/0	2,3,1,0
+stages/stage2/parts/conv0/biases	Mconv1_stage3/1	
+stages/stage2/parts/conv1/weights	Mconv2_stage3/0	2,3,1,0
+stages/stage2/parts/conv1/biases	Mconv2_stage3/1	
+stages/stage2/parts/conv2/weights	Mconv3_stage3/0	2,3,1,0
+stages/stage2/parts/conv2/biases	Mconv3_stage3/1	
+stages/stage2/parts/conv3/weights	Mconv4_stage3/0	2,3,1,0
+stages/stage2/parts/conv3/biases	Mconv4_stage3/1	
+stages/stage2/parts/conv4/weights	Mconv5_stage3/0	2,3,1,0
+stages/stage2/parts/conv4/biases	Mconv5_stage3/1	
+stages/stage2/parts/conv5/weights	Mconv6_stage3/0	2,3,1,0
+stages/stage2/parts/conv5/biases	Mconv6_stage3/1	
+stages/stage2/parts/Conv/weights	Mconv7_stage3/0	2,3,1,0
+stages/stage2/parts/Conv/biases	Mconv7_stage3/1	
+stages/stage3/parts/conv0/weights	Mconv1_stage4/0	2,3,1,0
+stages/stage3/parts/conv0/biases	Mconv1_stage4/1	
+stages/stage3/parts/conv1/weights	Mconv2_stage4/0	2,3,1,0
+stages/stage3/parts/conv1/biases	Mconv2_stage4/1	
+stages/stage3/parts/conv2/weights	Mconv3_stage4/0	2,3,1,0
+stages/stage3/parts/conv2/biases	Mconv3_stage4/1	
+stages/stage3/parts/conv3/weights	Mconv4_stage4/0	2,3,1,0
+stages/stage3/parts/conv3/biases	Mconv4_stage4/1	
+stages/stage3/parts/conv4/weights	Mconv5_stage4/0	2,3,1,0
+stages/stage3/parts/conv4/biases	Mconv5_stage4/1	
+stages/stage3/parts/conv5/weights	Mconv6_stage4/0	2,3,1,0
+stages/stage3/parts/conv5/biases	Mconv6_stage4/1	
+stages/stage3/parts/Conv/weights	Mconv7_stage4/0	2,3,1,0
+stages/stage3/parts/Conv/biases	Mconv7_stage4/1	
+stages/stage4/parts/conv0/weights	Mconv1_stage5/0	2,3,1,0
+stages/stage4/parts/conv0/biases	Mconv1_stage5/1	
+stages/stage4/parts/conv1/weights	Mconv2_stage5/0	2,3,1,0
+stages/stage4/parts/conv1/biases	Mconv2_stage5/1	
+stages/stage4/parts/conv2/weights	Mconv3_stage5/0	2,3,1,0
+stages/stage4/parts/conv2/biases	Mconv3_stage5/1	
+stages/stage4/parts/conv3/weights	Mconv4_stage5/0	2,3,1,0
+stages/stage4/parts/conv3/biases	Mconv4_stage5/1	
+stages/stage4/parts/conv4/weights	Mconv5_stage5/0	2,3,1,0
+stages/stage4/parts/conv4/biases	Mconv5_stage5/1	
+stages/stage4/parts/conv5/weights	Mconv6_stage5/0	2,3,1,0
+stages/stage4/parts/conv5/biases	Mconv6_stage5/1	
+stages/stage4/parts/Conv/weights	Mconv7_stage5/0	2,3,1,0
+stages/stage4/parts/Conv/biases	Mconv7_stage5/1	
+stages/stage5/parts/conv0/weights	Mconv1_stage6/0	2,3,1,0
+stages/stage5/parts/conv0/biases	Mconv1_stage6/1	
+stages/stage5/parts/conv1/weights	Mconv2_stage6/0	2,3,1,0
+stages/stage5/parts/conv1/biases	Mconv2_stage6/1	
+stages/stage5/parts/conv2/weights	Mconv3_stage6/0	2,3,1,0
+stages/stage5/parts/conv2/biases	Mconv3_stage6/1	
+stages/stage5/parts/conv3/weights	Mconv4_stage6/0	2,3,1,0
+stages/stage5/parts/conv3/biases	Mconv4_stage6/1	
+stages/stage5/parts/conv4/weights	Mconv5_stage6/0	2,3,1,0
+stages/stage5/parts/conv4/biases	Mconv5_stage6/1	
+stages/stage5/parts/conv5/weights	Mconv6_stage6/0	2,3,1,0
+stages/stage5/parts/conv5/biases	Mconv6_stage6/1	
+stages/stage5/parts/Conv/weights	Mconv7_stage6/0	2,3,1,0
+stages/stage5/parts/Conv/biases	Mconv7_stage6/1	

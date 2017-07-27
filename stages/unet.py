@@ -116,6 +116,15 @@ class Unet2Sqz3_1(Stages):
         self.sqz = [1 / 3]
 
 
+# 2M
+class UnetI2Sqz3_1(Stages):
+    def __init__(self, config, num_limbs, num_parts):
+        Stages.__init__(self, num_limbs, num_parts)
+        self.interp = True
+        self.multiply = [1.5, 1.2]
+        self.sqz = [1 / 3]
+
+
 # 13.4M
 class Unet3(Stages):
     def __init__(self, config, num_limbs, num_parts):

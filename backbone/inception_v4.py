@@ -31,6 +31,8 @@ from . import inception_utils
 slim = tf.contrib.slim
 
 shrink0 = 1
+shrink1 = 1
+shrink2 = 1
 shrink = 4
 
 
@@ -181,11 +183,11 @@ def inception_v4_base(inputs, final_endpoint='Mixed_7d', scope=None):
                         padding='VALID', scope='Conv2d_1a_3x3')
       if add_and_check_final('Conv2d_1a_3x3', net): return net, end_points
       # 149 x 149 x 32
-      net = slim.conv2d(net, 32 // shrink0, [3, 3], padding='VALID',
+      net = slim.conv2d(net, 32 // shrink1, [3, 3], padding='VALID',
                         scope='Conv2d_2a_3x3')
       if add_and_check_final('Conv2d_2a_3x3', net): return net, end_points
       # 147 x 147 x 32
-      net = slim.conv2d(net, 64 // shrink0, [3, 3], scope='Conv2d_2b_3x3')
+      net = slim.conv2d(net, 64 // shrink2, [3, 3], scope='Conv2d_2b_3x3')
       if add_and_check_final('Conv2d_2b_3x3', net): return net, end_points
       # 147 x 147 x 64
       with tf.variable_scope('Mixed_3a'):

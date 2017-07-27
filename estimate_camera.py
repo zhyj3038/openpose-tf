@@ -88,7 +88,7 @@ def main():
         variables = slim.get_variables_to_restore()
         slim.assign_from_checkpoint_fn(checkpoint_path, variables)(sess)
         cap = cv2.VideoCapture(args.camera)
-        keys = set(map(ord, args.keys))
+        keys = set(args.keys)
         try:
             while True:
                 ret, image_bgr = cap.read()
@@ -112,7 +112,7 @@ def make_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', nargs='+', default=['config.ini'], help='config file')
     parser.add_argument('--camera', type=int, default=0)
-    parser.add_argument('-k', '--keys', nargs='+', default=[' '], help='keys to dump images')
+    parser.add_argument('-k', '--keys', nargs='+', type=int, default=[ord(' ')], help='keys to dump images')
     parser.add_argument('-p', '--part', action='store_true', help='show part numbers')
     parser.add_argument('-f', '--format', default='%Y-%m-%d_%H-%M-%S.jpg', help='dump file name format')
     parser.add_argument('--level', default='info', help='logging level')

@@ -98,16 +98,16 @@ def main():
             saver = tf.train.Saver()
             saver.save(sess, dst)
         else:
-            tf.logging.info('TensorFlow variables:')
             for var in tf.global_variables():
                 print(var.op.name + '\t' + ','.join(map(str, var.get_shape().as_list())))
-            tf.logging.info('model file variables:')
+            """
             with h5py.File(path, 'r') as f:
                 for _dset in f.keys():
                     dset = f[_dset]
                     for _attr in dset:
                         attr = dset[_attr]
                         print('%s/%s\t' % (_dset, _attr) + ','.join(map(str, attr.shape)))
+            """
 
 
 def make_args():

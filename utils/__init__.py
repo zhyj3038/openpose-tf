@@ -28,14 +28,13 @@ import pyopenpose
 
 
 class DatasetMapper(object):
-    def __init__(self, size, mapper):
-        self.size = size
+    def __init__(self, mapper):
         self.mapper = mapper
     
     def __call__(self, parts, dtype=np.int64):
         assert len(parts.shape) == 2 and parts.shape[-1] == 3
-        result = np.zeros([self.size, 3], dtype=parts.dtype)
-        for i, func in self.mapper:
+        result = np.zeros([len(self.mapper), 3], dtype=parts.dtype)
+        for i, func in enumerate(self.mapper):
             result[i] = func(parts)
         return result
 
@@ -45,15 +44,16 @@ def get_dataset_mappers(config):
     mappers = {}
     for filename in os.listdir(dataset):
         path = os.path.join(dataset, filename)
-        if os.path.isfile(path) and os.path.splitext(filename)[-1].lower() == '.tsv':
+        if os.path.isfile(path) and os.path.splitext(filename)[-1].lower() == '.txt':
             dataset = os.path.splitext(filename)[0]
             with open(path, 'r') as f:
-                mapper = [(int(s), eval(func)) for s, func in csv.reader(f, delimiter='\t')]
+                mapper = [eval(line.rstrip()) for line in f]
             mappers[dataset] = mapper
-    size = max(map(lambda mapper: max(map(lambda item: item[0], mapper)), mappers.values())) + 1
+    sizes = set(map(lambda mapper: len(mapper), mappers.values()))
+    assert len(sizes) == 1
     for dataset in mappers:
-        mappers[dataset] = DatasetMapper(size, mappers[dataset])
-    return mappers, size
+        mappers[dataset] = DatasetMapper(mappers[dataset])
+    return mappers, next(iter(sizes))
 
 
 def get_symmetric_parts(config):
@@ -70,7 +70,10 @@ def get_symmetric_parts(config):
 def get_limbs_index(config):
     dataset = os.path.expanduser(os.path.expandvars(config.get('cache', 'dataset')))
     limbs_index = np.loadtxt(dataset + '.tsv', dtype=np.int, delimiter='\t')
-    assert pyopenpose.limbs_points(limbs_index) == get_dataset_mappers(config)[1]
+    if len(limbs_index) > 0:
+        assert pyopenpose.limbs_points(limbs_index) == get_dataset_mappers(config)[1]
+    else:
+        limbs_index = np.reshape(limbs_index, [0, 2])
     return limbs_index
 
 
